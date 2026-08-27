@@ -1,0 +1,843 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #080808;
+    --border: #292929;
+
+    --text: #e8e8e8;
+    --muted: #666;
+    --bright: #fff;
+
+    --blue: #3b82f6;
+    --red: #ef4444;
+
+    --blue-bg: rgba(59, 130, 246, 0.22);
+    --red-bg: rgba(239, 68, 68, 0.22);
+
+    --blue-progress: rgba(59, 130, 246, 0.75);
+    --red-progress: rgba(239, 68, 68, 0.75);
+}
+
+
+/* ==================================================
+   BASE
+   ================================================== */
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    min-height: 100%;
+
+    background: var(--bg);
+    color: var(--text);
+
+    font-family:
+        "SFMono-Regular",
+        "Menlo",
+        "Monaco",
+        "Courier New",
+        monospace;
+}
+
+body {
+    min-height: 100vh;
+}
+
+
+/* ==================================================
+   APP
+   ================================================== */
+
+#app {
+    width: 100%;
+    max-width: 600px;
+
+    min-height: 100vh;
+
+    margin: 0 auto;
+
+    position: relative;
+
+    padding-bottom: 90px;
+}
+
+
+/* ==================================================
+   SCREENS
+   ================================================== */
+
+.screen {
+    min-height: calc(100vh - 90px);
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* ==================================================
+   TOP BAR
+   ================================================== */
+
+.topbar {
+    height: 64px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 20px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.logo,
+.screen-title {
+    color: var(--bright);
+
+    font-size: 14px;
+    font-weight: bold;
+
+    letter-spacing: 3px;
+}
+
+#race-distance-header {
+    color: var(--muted);
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+}
+
+
+/* ==================================================
+   BACK BUTTON
+   ================================================== */
+
+.icon-button {
+    width: 40px;
+    height: 40px;
+
+    padding: 0;
+
+    border: 0;
+
+    background: transparent;
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: 24px;
+
+    cursor: pointer;
+}
+
+
+/* ==================================================
+   RACE STATUS
+   ================================================== */
+
+.race-status {
+    text-align: center;
+
+    padding: 30px 20px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.label {
+    margin-bottom: 10px;
+
+    color: var(--muted);
+
+    font-size: 9px;
+
+    letter-spacing: 3px;
+}
+
+#status {
+    min-height: 52px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: var(--bright);
+
+    font-size: 28px;
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+
+/* ==================================================
+   RIDERS
+   ================================================== */
+
+.riders {
+    display: flex;
+
+    flex-direction: column;
+}
+
+.rider {
+    position: relative;
+
+    min-height: 230px;
+
+    overflow: hidden;
+
+    border-bottom: 1px solid var(--border);
+
+    background: var(--bg);
+}
+
+
+/* ==================================================
+   FULL PANEL PROGRESS
+   ================================================== */
+
+.rider-progress {
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 0;
+
+    overflow: hidden;
+}
+
+
+/* Dark background */
+
+.rider-1 .rider-progress {
+    background: var(--blue-bg);
+}
+
+.rider-2 .rider-progress {
+    background: var(--red-bg);
+}
+
+
+/* Actual progress */
+
+.rider-progress div {
+    position: absolute;
+
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    width: 0%;
+
+    transition:
+        width 0.1s linear;
+}
+
+.rider-1 .rider-progress div {
+    background: var(--blue-progress);
+}
+
+.rider-2 .rider-progress div {
+    background: var(--red-progress);
+}
+
+
+/* ==================================================
+   RIDER CONTENT
+   ================================================== */
+
+.rider-content {
+    position: relative;
+
+    z-index: 1;
+
+    min-height: 230px;
+
+    padding: 27px 20px 25px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: space-between;
+}
+
+
+/* ==================================================
+   RIDER NAME
+   ================================================== */
+
+.rider-name {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 10px;
+    font-weight: bold;
+
+    letter-spacing: 3px;
+}
+
+.rider-name::before {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+}
+
+.rider-1 .rider-name::before {
+    background: var(--blue);
+}
+
+.rider-2 .rider-name::before {
+    background: var(--red);
+}
+
+
+/* ==================================================
+   SPEED
+   ================================================== */
+
+.speed {
+    display: flex;
+
+    align-items: baseline;
+
+    gap: 9px;
+}
+
+.speed span {
+    color: var(--bright);
+
+    font-size: 64px;
+    font-weight: bold;
+
+    line-height: 0.9;
+
+    letter-spacing: -3px;
+}
+
+.speed small {
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: 10px;
+
+    letter-spacing: 1px;
+}
+
+
+/* ==================================================
+   BOTTOM DATA
+   ================================================== */
+
+.rider-bottom {
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+}
+
+
+/* ==================================================
+   DISTANCE / CADENCE
+   ================================================== */
+
+.distance,
+.cadence {
+    display: flex;
+
+    align-items: baseline;
+
+    gap: 7px;
+}
+
+.distance span,
+.cadence span {
+    color: var(--bright);
+
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.distance small,
+.cadence small {
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+
+/* ==================================================
+   START BUTTON
+   ================================================== */
+
+.main-button {
+    display: block;
+
+    width: calc(100% - 40px);
+
+    margin: 24px 20px;
+
+    padding: 17px;
+
+    border: 1px solid #444;
+
+    background: transparent;
+
+    color: var(--bright);
+
+    font-family: inherit;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    letter-spacing: 3px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+.main-button:hover:not(:disabled) {
+    background: var(--bright);
+
+    color: #000;
+
+    border-color: var(--bright);
+}
+
+.main-button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.main-button:disabled {
+    color: #444;
+
+    border-color: #222;
+
+    cursor: not-allowed;
+}
+
+
+/* ==================================================
+   COUNTDOWN
+   ================================================== */
+
+#countdown-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.72);
+
+    pointer-events: none;
+}
+
+#countdown-number {
+    color: #fff;
+
+    font-size: min(38vw, 240px);
+
+    font-weight: bold;
+
+    line-height: 1;
+
+    letter-spacing: -10px;
+
+    text-shadow:
+        0 0 20px rgba(255, 255, 255, 0.35),
+        0 0 60px rgba(255, 255, 255, 0.15);
+
+    animation:
+        countdownNumber 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+
+@keyframes countdownNumber {
+
+    0% {
+        transform: scale(1.8);
+
+        opacity: 0;
+
+        filter: blur(8px);
+    }
+
+    15% {
+        transform: scale(1.15);
+
+        opacity: 1;
+
+        filter: blur(0);
+    }
+
+    55% {
+        transform: scale(1);
+
+        opacity: 1;
+
+        filter: blur(0);
+    }
+
+    100% {
+        transform: scale(0.65);
+
+        opacity: 0;
+
+        filter: blur(4px);
+    }
+}
+
+
+/* ==================================================
+   WINNER FLASH
+   ================================================== */
+
+#winner-flash {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1100;
+
+    pointer-events: none;
+
+    opacity: 0;
+}
+
+#winner-flash.blue {
+    display: block;
+
+    background: var(--blue);
+
+    animation:
+        winnerFlash 0.3s ease-in-out infinite;
+}
+
+#winner-flash.red {
+    display: block;
+
+    background: var(--red);
+
+    animation:
+        winnerFlash 0.3s ease-in-out infinite;
+}
+
+
+@keyframes winnerFlash {
+
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.75;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+
+/* ==================================================
+   WINNER OVERLAY
+   ================================================== */
+
+#winner-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1200;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(0, 0, 0, 0.35);
+
+    pointer-events: none;
+}
+
+#winner-overlay.hidden {
+    display: none !important;
+}
+
+
+#winner-number {
+    color: #fff;
+
+    font-size: min(12vw, 80px);
+
+    font-weight: bold;
+
+    line-height: 1;
+
+    letter-spacing: 3px;
+
+    text-align: center;
+
+    text-shadow:
+        0 0 20px rgba(255, 255, 255, 0.35),
+        0 0 60px rgba(255, 255, 255, 0.15);
+}
+#winner-number {
+    color: #fff;
+
+    font-size: min(12vw, 80px);
+
+    font-weight: bold;
+
+    line-height: 1;
+
+    letter-spacing: 3px;
+
+    text-align: center;
+
+    text-shadow:
+        0 0 20px rgba(255, 255, 255, 0.35),
+        0 0 60px rgba(255, 255, 255, 0.15);
+}
+
+
+/* ==================================================
+   SETUP
+   ================================================== */
+
+.setup-content {
+    padding: 25px 20px;
+}
+
+.section-title {
+    margin: 20px 0 10px;
+
+    color: var(--muted);
+
+    font-size: 9px;
+
+    letter-spacing: 3px;
+}
+
+.setting-row {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 18px 0;
+
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.setting-name {
+    font-size: 13px;
+}
+
+.setting-description {
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-size: 9px;
+}
+
+select {
+    padding: 9px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 0;
+
+    outline: none;
+
+    background: var(--bg);
+    color: var(--text);
+
+    font-family: inherit;
+
+    font-size: 12px;
+}
+
+
+/* ==================================================
+   WHEEL
+   ================================================== */
+
+.rider-setting {
+    padding: 20px 0;
+
+    border-top: 1px solid var(--border);
+}
+
+.rider-setting-title {
+    margin-bottom: 12px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+.wheel-input {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.wheel-input input {
+    width: 150px;
+
+    padding: 12px;
+
+    border: 1px solid var(--border);
+
+    border-radius: 0;
+
+    outline: none;
+
+    background: var(--bg);
+    color: var(--text);
+
+    font-family: inherit;
+
+    font-size: 20px;
+}
+
+.wheel-input input:focus {
+    border-color: var(--bright);
+}
+
+.wheel-input span {
+    color: var(--muted);
+
+    font-size: 10px;
+}
+
+.wheel-description {
+    margin-top: 8px;
+
+    color: var(--muted);
+
+    font-size: 9px;
+}
+
+
+/* ==================================================
+   NAVIGATION
+   ================================================== */
+
+.navigation {
+    position: fixed;
+
+    bottom: 0;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 100%;
+    max-width: 600px;
+
+    height: 70px;
+
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    background: var(--bg);
+
+    border-top: 1px solid var(--border);
+
+    z-index: 100;
+}
+
+.nav-item {
+    border: 0;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    font-family: inherit;
+
+    font-size: 9px;
+
+    letter-spacing: 2px;
+
+    cursor: pointer;
+}
+
+.nav-item span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 11px;
+}
+
+.nav-item.active {
+    color: var(--bright);
+}
+
+
+/* ==================================================
+   MOBILE
+   ================================================== */
+
+@media (max-width: 400px) {
+
+    .rider {
+        min-height: 210px;
+    }
+
+    .rider-content {
+        min-height: 210px;
+    }
+
+    .speed span {
+        font-size: 56px;
+    }
+
+    #status {
+        font-size: 25px;
+    }
+
+    #countdown-number {
+        font-size: 68vw;
+    }
+}

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+    <title>Gold Sprint</title>
+
+    <link rel="stylesheet" href="/style.css?v=6">
+</head>
+
+<body>
+
+    <div id="app">
+
+        <!-- COUNTDOWN -->
+
+        <div id="countdown-overlay" class="hidden">
+            <div id="countdown-number">3</div>
+        </div>
+
+
+        <!-- WINNER FLASH -->
+
+        <div id="winner-flash" class="hidden"></div>
+
+
+        <!-- WINNER -->
+
+        <div id="winner-overlay" class="hidden">
+            <div id="winner-number"></div>
+        </div>
+
+
+        <!-- RACE -->
+
+        <section id="race-screen" class="screen">
+
+            <header class="topbar">
+
+                <div class="logo">
+                    GOLD SPRINT
+                </div>
+
+                <div id="race-distance-header">
+                    250 M
+                </div>
+
+            </header>
+
+
+            <div class="race-status">
+
+                <div class="label">
+                    RACE STATUS
+                </div>
+
+                <div id="status">
+                    READY
+                </div>
+
+            </div>
+
+
+            <div class="riders">
+
+                <!-- RIDER 01 -->
+
+                <div class="rider rider-1">
+
+                    <div class="rider-progress">
+                        <div id="progress-1"></div>
+                    </div>
+
+                    <div class="rider-content">
+
+                        <div class="rider-name">
+                            RIDER 01
+                        </div>
+
+                        <div class="speed">
+                            <span id="speed-1">0.0</span>
+                            <small>KM/H</small>
+                        </div>
+
+                        <div class="rider-bottom">
+
+                            <div class="distance">
+                                <span id="distance-1">0.0</span>
+
+                                <small>
+                                    /
+                                    <span id="distance-limit-1">
+                                        250
+                                    </span>
+                                    M
+                                </small>
+                            </div>
+
+                            <div class="cadence">
+                                <span id="cadence-1">0</span>
+                                <small>RPM</small>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- RIDER 02 -->
+
+                <div class="rider rider-2">
+
+                    <div class="rider-progress">
+                        <div id="progress-2"></div>
+                    </div>
+
+                    <div class="rider-content">
+
+                        <div class="rider-name">
+                            RIDER 02
+                        </div>
+
+                        <div class="speed">
+                            <span id="speed-2">0.0</span>
+                            <small>KM/H</small>
+                        </div>
+
+                        <div class="rider-bottom">
+
+                            <div class="distance">
+                                <span id="distance-2">0.0</span>
+
+                                <small>
+                                    /
+                                    <span id="distance-limit-2">
+                                        250
+                                    </span>
+                                    M
+                                </small>
+                            </div>
+
+                            <div class="cadence">
+                                <span id="cadence-2">0</span>
+                                <small>RPM</small>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <button id="start-button" class="main-button">
+                START
+            </button>
+
+        </section>
+
+
+        <!-- SETUP -->
+
+        <section id="setup-screen" class="screen hidden">
+
+            <header class="topbar">
+
+                <button id="back-button" class="icon-button">
+                    ←
+                </button>
+
+                <div class="screen-title">
+                    SETUP
+                </div>
+
+                <div></div>
+
+            </header>
+
+
+            <div class="setup-content">
+
+                <div class="section-title">
+                    RACE
+                </div>
+
+
+                <div class="setting-row">
+
+                    <div>
+
+                        <div class="setting-name">
+                            DISTANCE
+                        </div>
+
+                        <div class="setting-description">
+                            Race distance
+                        </div>
+
+                    </div>
+
+
+                    <select id="setup-distance">
+
+                        <option value="100">
+                            100 M
+                        </option>
+
+                        <option value="250" selected>
+                            250 M
+                        </option>
+
+                        <option value="500">
+                            500 M
+                        </option>
+
+                        <option value="1000">
+                            1000 M
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="section-title">
+                    WHEEL
+                </div>
+
+
+                <!-- RIDER 01 -->
+
+                <div class="rider-setting">
+
+                    <div class="rider-setting-title">
+                        RIDER 01
+                    </div>
+
+                    <div class="wheel-input">
+
+                        <input id="wheel-1" type="number" value="2105" min="1000" max="3000">
+
+                        <span>MM</span>
+
+                    </div>
+
+                    <div class="wheel-description">
+                        Wheel circumference
+                    </div>
+
+                </div>
+
+
+                <!-- RIDER 02 -->
+
+                <div class="rider-setting">
+
+                    <div class="rider-setting-title">
+                        RIDER 02
+                    </div>
+
+                    <div class="wheel-input">
+
+                        <input id="wheel-2" type="number" value="2105" min="1000" max="3000">
+
+                        <span>MM</span>
+
+                    </div>
+
+                    <div class="wheel-description">
+                        Wheel circumference
+                    </div>
+
+                </div>
+
+
+                <button id="save-settings" class="main-button">
+                    SAVE
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- NAVIGATION -->
+
+        <nav class="navigation">
+
+            <button id="nav-race" class="nav-item active">
+                <span>■</span>
+                RACE
+            </button>
+
+            <button id="nav-setup" class="nav-item">
+                <span>⚙</span>
+                SETUP
+            </button>
+
+        </nav>
+
+    </div>
+
+
+    <script src="/app.js?v=6"></script>
+
+</body>
+
+</html>
