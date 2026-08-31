@@ -1,0 +1,12 @@
+# Compiled binary (module name is "gold-sprint")
+/gold-sprint
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.idea/
+.vscode/

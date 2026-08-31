@@ -17,6 +17,11 @@ const (
 type Race struct {
 	mu sync.Mutex
 
+	// countdownStep is the delay between countdown ticks. It is a field so
+	// tests can shrink it instead of waiting whole seconds; it is only ever
+	// set before Start is called.
+	countdownStep time.Duration
+
 	State    State
 	Distance float64
 
@@ -25,20 +30,14 @@ type Race struct {
 	StartTime  time.Time
 	FinishTime map[int]time.Time
 	Winner     int
-
-	WheelCircumference map[int]float64
 }
 
 func New(distance float64) *Race {
 	return &Race{
-		State:      StateReady,
-		Distance:   distance,
-		FinishTime: make(map[int]time.Time),
-
-		WheelCircumference: map[int]float64{
-			1: 2105,
-			2: 2105,
-		},
+		State:         StateReady,
+		Distance:      distance,
+		FinishTime:    make(map[int]time.Time),
+		countdownStep: time.Second,
 	}
 }
 
@@ -62,16 +61,21 @@ func (r *Race) Start() {
 			r.Countdown = i
 			r.mu.Unlock()
 
-			time.Sleep(time.Second)
+			time.Sleep(r.countdownStep)
 		}
 
-		r.StartRunning()
+		r.startRunning()
 	}()
 }
 
-func (r *Race) StartRunning() {
+func (r *Race) startRunning() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// A new race may have been requested while we were counting down.
+	if r.State != StateCountdown {
+		return
+	}
 
 	r.State = StateRunning
 	r.StartTime = time.Now()
@@ -82,7 +86,10 @@ func (r *Race) Finish(rider int) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.State != StateRunning {
+	// The first finisher flips the race to Finished and takes the win, but the
+	// other riders keep rolling until they cross too, so a qualifying heat can
+	// record a time for everyone on the track.
+	if r.State != StateRunning && r.State != StateFinished {
 		return
 	}
 
@@ -98,32 +105,40 @@ func (r *Race) Finish(rider int) {
 	}
 }
 
+// IsFinished reports whether the given rider has already crossed the line.
+func (r *Race) IsFinished(rider int) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, ok := r.FinishTime[rider]
+
+	return ok
+}
+
+// FinishSeconds returns each rider's finishing time in seconds from the start.
+// Riders still on the track are absent from the map.
+func (r *Race) FinishSeconds() map[int]float64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.StartTime.IsZero() {
+		return nil
+	}
+
+	out := make(map[int]float64, len(r.FinishTime))
+
+	for id, t := range r.FinishTime {
+		out[id] = t.Sub(r.StartTime).Seconds()
+	}
+
+	return out
+}
+
 func (r *Race) SetDistance(distance float64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.Distance = distance
-}
-
-func (r *Race) SetWheelCircumference(
-	rider int,
-	circumference float64,
-) {
-	if circumference <= 0 {
-		return
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.WheelCircumference[rider] = circumference
-}
-
-func (r *Race) GetWheelCircumference(rider int) float64 {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	return r.WheelCircumference[rider]
 }
 
 func (r *Race) GetDistance() float64 {
@@ -154,13 +169,21 @@ func (r *Race) GetWinner() int {
 	return r.Winner
 }
 
+// GetElapsed returns the running time in seconds: the live time while the race
+// is running, and the winner's finishing time once it is finished.
 func (r *Race) GetElapsed() float64 {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.State != StateRunning {
-		return 0
+	switch r.State {
+	case StateRunning:
+		return time.Since(r.StartTime).Seconds()
+
+	case StateFinished:
+		if t, ok := r.FinishTime[r.Winner]; ok {
+			return t.Sub(r.StartTime).Seconds()
+		}
 	}
 
-	return time.Since(r.StartTime).Seconds()
+	return 0
 }

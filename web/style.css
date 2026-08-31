@@ -4,26 +4,12 @@
 
 :root {
     --bg: #080808;
-    --border: #292929;
-
-    --text: #e8e8e8;
+    --panel: #101010;
+    --border: #333;
+    --text: #ddd;
     --muted: #666;
     --bright: #fff;
-
-    --blue: #3b82f6;
-    --red: #ef4444;
-
-    --blue-bg: rgba(59, 130, 246, 0.22);
-    --red-bg: rgba(239, 68, 68, 0.22);
-
-    --blue-progress: rgba(59, 130, 246, 0.75);
-    --red-progress: rgba(239, 68, 68, 0.75);
 }
-
-
-/* ==================================================
-   BASE
-   ================================================== */
 
 html,
 body {
@@ -49,9 +35,7 @@ body {
 }
 
 
-/* ==================================================
-   APP
-   ================================================== */
+/* APP */
 
 #app {
     width: 100%;
@@ -63,16 +47,14 @@ body {
 
     position: relative;
 
-    padding-bottom: 90px;
+    padding-bottom: 80px;
 }
 
 
-/* ==================================================
-   SCREENS
-   ================================================== */
+/* SCREENS */
 
 .screen {
-    min-height: calc(100vh - 90px);
+    min-height: calc(100vh - 80px);
 }
 
 .hidden {
@@ -80,47 +62,40 @@ body {
 }
 
 
-/* ==================================================
-   TOP BAR
-   ================================================== */
+/* TOP BAR */
 
 .topbar {
     height: 64px;
 
-    display: flex;
+    display: grid;
+
+    grid-template-columns: 1fr auto 1fr;
 
     align-items: center;
-    justify-content: space-between;
 
     padding: 0 20px;
 
     border-bottom: 1px solid var(--border);
 }
 
-.logo,
+.logo {
+    font-size: 16px;
+
+    letter-spacing: 2px;
+}
+
 .screen-title {
-    color: var(--bright);
+    font-size: 15px;
 
-    font-size: 14px;
-    font-weight: bold;
-
-    letter-spacing: 3px;
-}
-
-#race-distance-header {
-    color: var(--muted);
-
-    font-size: 11px;
-
-    letter-spacing: 1px;
+    letter-spacing: 2px;
 }
 
 
-/* ==================================================
-   BACK BUTTON
-   ================================================== */
+/* BACK */
 
 .icon-button {
+    justify-self: start;
+
     width: 40px;
     height: 40px;
 
@@ -129,57 +104,39 @@ body {
     border: 0;
 
     background: transparent;
+
     color: var(--text);
 
     font-family: inherit;
+
     font-size: 24px;
 
     cursor: pointer;
 }
 
 
-/* ==================================================
-   RACE STATUS
-   ================================================== */
+/* RACE STATUS */
 
 .race-status {
     text-align: center;
 
-    padding: 30px 20px;
+    padding: 35px 20px;
 
     border-bottom: 1px solid var(--border);
 }
 
-.label {
-    margin-bottom: 10px;
-
-    color: var(--muted);
-
-    font-size: 9px;
-
-    letter-spacing: 3px;
-}
-
 #status {
-    min-height: 52px;
+    min-height: 48px;
 
-    display: flex;
+    font-size: 32px;
 
-    align-items: center;
-    justify-content: center;
-
-    color: var(--bright);
-
-    font-size: 28px;
     font-weight: bold;
 
     letter-spacing: 2px;
 }
 
 
-/* ==================================================
-   RIDERS
-   ================================================== */
+/* RIDERS */
 
 .riders {
     display: flex;
@@ -190,450 +147,158 @@ body {
 .rider {
     position: relative;
 
-    min-height: 230px;
-
     overflow: hidden;
+
+    padding: 25px 20px;
 
     border-bottom: 1px solid var(--border);
-
-    background: var(--bg);
 }
-
-
-/* ==================================================
-   FULL PANEL PROGRESS
-   ================================================== */
-
-.rider-progress {
-    position: absolute;
-
-    inset: 0;
-
-    z-index: 0;
-
-    overflow: hidden;
-}
-
-
-/* Dark background */
-
-.rider-1 .rider-progress {
-    background: var(--blue-bg);
-}
-
-.rider-2 .rider-progress {
-    background: var(--red-bg);
-}
-
-
-/* Actual progress */
-
-.rider-progress div {
-    position: absolute;
-
-    left: 0;
-    top: 0;
-    bottom: 0;
-
-    width: 0%;
-
-    transition:
-        width 0.1s linear;
-}
-
-.rider-1 .rider-progress div {
-    background: var(--blue-progress);
-}
-
-.rider-2 .rider-progress div {
-    background: var(--red-progress);
-}
-
-
-/* ==================================================
-   RIDER CONTENT
-   ================================================== */
-
-.rider-content {
-    position: relative;
-
-    z-index: 1;
-
-    min-height: 230px;
-
-    padding: 27px 20px 25px;
-
-    display: flex;
-
-    flex-direction: column;
-
-    justify-content: space-between;
-}
-
-
-/* ==================================================
-   RIDER NAME
-   ================================================== */
 
 .rider-name {
+    position: relative;
+    z-index: 1;
+
+    margin-bottom: 20px;
+
+    color: #b0b0b0;
+
+    font-size: 12px;
+
+    letter-spacing: 2px;
+}
+
+
+/* SPEED */
+
+.speed {
+    position: relative;
+    z-index: 1;
+
     display: flex;
 
-    align-items: center;
+    align-items: baseline;
 
     gap: 10px;
 
-    color: rgba(255, 255, 255, 0.65);
-
-    font-size: 10px;
-    font-weight: bold;
-
-    letter-spacing: 3px;
-}
-
-.rider-name::before {
-    content: "";
-
-    width: 7px;
-    height: 7px;
-
-    flex-shrink: 0;
-
-    border-radius: 50%;
-}
-
-.rider-1 .rider-name::before {
-    background: var(--blue);
-}
-
-.rider-2 .rider-name::before {
-    background: var(--red);
-}
-
-
-/* ==================================================
-   SPEED
-   ================================================== */
-
-.speed {
-    display: flex;
-
-    align-items: baseline;
-
-    gap: 9px;
+    margin-bottom: 20px;
 }
 
 .speed span {
-    color: var(--bright);
-
     font-size: 64px;
+
     font-weight: bold;
 
-    line-height: 0.9;
-
-    letter-spacing: -3px;
+    line-height: 1;
 }
 
 .speed small {
-    color: rgba(255, 255, 255, 0.55);
+    color: #b0b0b0;
 
-    font-size: 10px;
-
-    letter-spacing: 1px;
+    font-size: 12px;
 }
 
 
-/* ==================================================
-   BOTTOM DATA
-   ================================================== */
+/* PROGRESS — fills the whole rider box, sits behind the text */
 
-.rider-bottom {
-    display: flex;
+.progress {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
 
-    align-items: flex-end;
+    background: transparent;
 
-    justify-content: space-between;
+    border: 0;
+}
+
+.progress div {
+    width: 0%;
+    height: 100%;
+
+    transition: width 0.1s linear;
+}
+
+.rider-1 .progress div {
+    background: #c62828;
+}
+
+.rider-2 .progress div {
+    background: #1565c0;
 }
 
 
-/* ==================================================
-   DISTANCE / CADENCE
-   ================================================== */
+/* DISTANCE / CADENCE */
 
 .distance,
 .cadence {
+    position: relative;
+    z-index: 1;
+
     display: flex;
 
     align-items: baseline;
 
-    gap: 7px;
+    gap: 8px;
+
+    margin-top: 10px;
 }
 
 .distance span,
 .cadence span {
-    color: var(--bright);
+    font-size: 24px;
 
-    font-size: 20px;
     font-weight: bold;
 }
 
 .distance small,
 .cadence small {
-    color: rgba(255, 255, 255, 0.55);
+    color: #b0b0b0;
 
-    font-size: 9px;
-
-    letter-spacing: 1px;
+    font-size: 11px;
 }
 
 
-/* ==================================================
-   START BUTTON
-   ================================================== */
+/* BUTTON */
 
 .main-button {
     display: block;
 
     width: calc(100% - 40px);
 
-    margin: 24px 20px;
+    margin: 25px 20px;
 
-    padding: 17px;
+    padding: 16px;
 
-    border: 1px solid #444;
+    border: 1px solid var(--bright);
 
-    background: transparent;
+    background: var(--bg);
 
     color: var(--bright);
 
     font-family: inherit;
 
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 16px;
 
-    letter-spacing: 3px;
+    letter-spacing: 2px;
 
     cursor: pointer;
-
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease,
-        transform 0.1s ease;
 }
 
 .main-button:hover:not(:disabled) {
     background: var(--bright);
 
-    color: #000;
-
-    border-color: var(--bright);
-}
-
-.main-button:active:not(:disabled) {
-    transform: scale(0.98);
+    color: var(--bg);
 }
 
 .main-button:disabled {
-    color: #444;
+    color: var(--muted);
 
-    border-color: #222;
+    border-color: var(--muted);
 
     cursor: not-allowed;
 }
 
 
-/* ==================================================
-   COUNTDOWN
-   ================================================== */
-
-#countdown-overlay {
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 1000;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    background: rgba(0, 0, 0, 0.72);
-
-    pointer-events: none;
-}
-
-#countdown-number {
-    color: #fff;
-
-    font-size: min(38vw, 240px);
-
-    font-weight: bold;
-
-    line-height: 1;
-
-    letter-spacing: -10px;
-
-    text-shadow:
-        0 0 20px rgba(255, 255, 255, 0.35),
-        0 0 60px rgba(255, 255, 255, 0.15);
-
-    animation:
-        countdownNumber 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-
-@keyframes countdownNumber {
-
-    0% {
-        transform: scale(1.8);
-
-        opacity: 0;
-
-        filter: blur(8px);
-    }
-
-    15% {
-        transform: scale(1.15);
-
-        opacity: 1;
-
-        filter: blur(0);
-    }
-
-    55% {
-        transform: scale(1);
-
-        opacity: 1;
-
-        filter: blur(0);
-    }
-
-    100% {
-        transform: scale(0.65);
-
-        opacity: 0;
-
-        filter: blur(4px);
-    }
-}
-
-
-/* ==================================================
-   WINNER FLASH
-   ================================================== */
-
-#winner-flash {
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 1100;
-
-    pointer-events: none;
-
-    opacity: 0;
-}
-
-#winner-flash.blue {
-    display: block;
-
-    background: var(--blue);
-
-    animation:
-        winnerFlash 0.3s ease-in-out infinite;
-}
-
-#winner-flash.red {
-    display: block;
-
-    background: var(--red);
-
-    animation:
-        winnerFlash 0.3s ease-in-out infinite;
-}
-
-
-@keyframes winnerFlash {
-
-    0% {
-        opacity: 0;
-    }
-
-    50% {
-        opacity: 0.75;
-    }
-
-    100% {
-        opacity: 0;
-    }
-}
-
-
-/* ==================================================
-   WINNER OVERLAY
-   ================================================== */
-
-#winner-overlay {
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 1200;
-
-    display: flex;
-
-    align-items: center;
-    justify-content: center;
-
-    background: rgba(0, 0, 0, 0.35);
-
-    pointer-events: none;
-}
-
-#winner-overlay.hidden {
-    display: none !important;
-}
-
-
-#winner-number {
-    color: #fff;
-
-    font-size: min(12vw, 80px);
-
-    font-weight: bold;
-
-    line-height: 1;
-
-    letter-spacing: 3px;
-
-    text-align: center;
-
-    text-shadow:
-        0 0 20px rgba(255, 255, 255, 0.35),
-        0 0 60px rgba(255, 255, 255, 0.15);
-}
-#winner-number {
-    color: #fff;
-
-    font-size: min(12vw, 80px);
-
-    font-weight: bold;
-
-    line-height: 1;
-
-    letter-spacing: 3px;
-
-    text-align: center;
-
-    text-shadow:
-        0 0 20px rgba(255, 255, 255, 0.35),
-        0 0 60px rgba(255, 255, 255, 0.15);
-}
-
-
-/* ==================================================
-   SETUP
-   ================================================== */
+/* SETUP */
 
 .setup-content {
     padding: 25px 20px;
@@ -644,16 +309,17 @@ body {
 
     color: var(--muted);
 
-    font-size: 9px;
+    font-size: 10px;
 
-    letter-spacing: 3px;
+    letter-spacing: 2px;
 }
 
 .setting-row {
     display: flex;
 
-    align-items: center;
     justify-content: space-between;
+
+    align-items: center;
 
     padding: 18px 0;
 
@@ -662,7 +328,7 @@ body {
 }
 
 .setting-name {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .setting-description {
@@ -670,7 +336,7 @@ body {
 
     color: var(--muted);
 
-    font-size: 9px;
+    font-size: 10px;
 }
 
 select {
@@ -680,20 +346,17 @@ select {
 
     border-radius: 0;
 
-    outline: none;
-
     background: var(--bg);
+
     color: var(--text);
 
     font-family: inherit;
 
-    font-size: 12px;
+    font-size: 13px;
 }
 
 
-/* ==================================================
-   WHEEL
-   ================================================== */
+/* WHEEL */
 
 .rider-setting {
     padding: 20px 0;
@@ -706,10 +369,9 @@ select {
 
     color: var(--muted);
 
-    font-size: 10px;
-    font-weight: bold;
+    font-size: 11px;
 
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
 .wheel-input {
@@ -732,6 +394,7 @@ select {
     outline: none;
 
     background: var(--bg);
+
     color: var(--text);
 
     font-family: inherit;
@@ -746,7 +409,7 @@ select {
 .wheel-input span {
     color: var(--muted);
 
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .wheel-description {
@@ -754,13 +417,11 @@ select {
 
     color: var(--muted);
 
-    font-size: 9px;
+    font-size: 10px;
 }
 
 
-/* ==================================================
-   NAVIGATION
-   ================================================== */
+/* NAVIGATION */
 
 .navigation {
     position: fixed;
@@ -777,13 +438,11 @@ select {
 
     display: grid;
 
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
 
     background: var(--bg);
 
     border-top: 1px solid var(--border);
-
-    z-index: 100;
 }
 
 .nav-item {
@@ -795,9 +454,9 @@ select {
 
     font-family: inherit;
 
-    font-size: 9px;
+    font-size: 10px;
 
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 
     cursor: pointer;
 }
@@ -807,7 +466,7 @@ select {
 
     margin-bottom: 5px;
 
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .nav-item.active {
@@ -815,29 +474,968 @@ select {
 }
 
 
-/* ==================================================
-   MOBILE
-   ================================================== */
+/* OVERLAY (countdown / result) */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+
+    z-index: 200;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    text-align: center;
+}
+
+
+/* COUNTDOWN */
+
+.overlay.is-countdown {
+    background: rgba(8, 8, 8, 0.82);
+
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+#overlay-countdown {
+    font-size: clamp(140px, 44vw, 400px);
+
+    font-weight: bold;
+
+    line-height: 1;
+
+    letter-spacing: 6px;
+
+    color: var(--bright);
+
+    text-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+}
+
+#overlay-countdown.tick {
+    animation: countdown-pop 1s ease-out;
+}
+
+@keyframes countdown-pop {
+
+    0% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+
+    18% {
+        opacity: 1;
+    }
+
+    55% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(0.8);
+        opacity: 0.12;
+    }
+}
+
+
+/* RESULT */
+
+.overlay.is-result {
+    cursor: pointer;
+
+    animation: overlay-fade-in 0.35s ease-out;
+}
+
+.overlay.is-result.winner-1 {
+    background:
+        radial-gradient(circle at 50% 35%,
+            rgba(224, 64, 64, 0.95),
+            rgba(150, 20, 20, 0.9) 55%,
+            rgba(90, 8, 8, 0.92) 100%);
+}
+
+.overlay.is-result.winner-2 {
+    background:
+        radial-gradient(circle at 50% 35%,
+            rgba(56, 128, 224, 0.95),
+            rgba(20, 84, 170, 0.9) 55%,
+            rgba(8, 44, 100, 0.92) 100%);
+}
+
+#overlay-result {
+    animation: result-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.overlay-result-label {
+    margin-bottom: 18px;
+
+    color: rgba(255, 255, 255, 0.72);
+
+    font-size: 14px;
+
+    letter-spacing: 5px;
+}
+
+#overlay-result-rider {
+    font-size: clamp(44px, 11vw, 128px);
+
+    font-weight: bold;
+
+    line-height: 1.05;
+
+    letter-spacing: 3px;
+
+    color: var(--bright);
+
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+#overlay-result-time {
+    margin-top: 16px;
+
+    color: rgba(255, 255, 255, 0.92);
+
+    font-size: clamp(34px, 8vw, 90px);
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+.overlay-result-hint {
+    margin-top: 44px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 11px;
+
+    letter-spacing: 4px;
+
+    animation: hint-blink 1.8s ease-in-out infinite;
+}
+
+@keyframes overlay-fade-in {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes result-pop {
+
+    0% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes hint-blink {
+
+    0%,
+    100% {
+        opacity: 0.25;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
+
+/* =========================================================================
+   TOURNAMENT
+   ========================================================================= */
+
+.tournament-content {
+    padding: 20px;
+}
+
+.tournament-content .section-title {
+    margin-top: 0;
+}
+
+.lane-1 {
+    color: #e04747;
+}
+
+.lane-2 {
+    color: #4a86e8;
+}
+
+
+/* RACE-SCREEN HEAT BANNER */
+
+.race-heat {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 14px 20px;
+
+    text-align: center;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.race-heat-round {
+    color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.race-heat-pair {
+    font-size: 15px;
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+.race-heat-vs {
+    margin: 0 8px;
+
+    color: var(--muted);
+
+    font-weight: normal;
+}
+
+.race-heat-exit {
+    margin-top: 2px;
+
+    padding: 4px 6px;
+
+    border: 0;
+
+    background: transparent;
+    color: var(--muted);
+
+    font-family: inherit;
+    font-size: 10px;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+    text-decoration: underline;
+
+    cursor: pointer;
+}
+
+.race-heat-exit:hover {
+    color: var(--text);
+}
+
+
+/* DISTANCE PICKER */
+
+.t-distance {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin: 4px 0 16px;
+
+    padding: 14px 0;
+
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.t-distance-label {
+    color: var(--muted);
+
+    font-size: 11px;
+
+    letter-spacing: 2px;
+}
+
+.t-distance select {
+    padding: 9px 12px;
+
+    font-size: 14px;
+}
+
+
+/* DEBUG ROW */
+
+.debug-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-top: 28px;
+
+    padding-top: 16px;
+
+    border-top: 1px dashed var(--border);
+}
+
+.debug-label {
+    color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 1px;
+}
+
+.debug-buttons {
+    display: flex;
+
+    gap: 6px;
+}
+
+.debug-btn {
+    min-width: 38px;
+
+    padding: 7px 8px;
+
+    border: 1px solid var(--border);
+
+    background: transparent;
+    color: var(--muted);
+
+    font-family: inherit;
+    font-size: 12px;
+
+    cursor: pointer;
+}
+
+.debug-btn:hover {
+    border-color: var(--text);
+    color: var(--text);
+}
+
+
+/* NEXT-UP BANNER (bracket view) */
+
+.br-next {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 20px;
+
+    padding: 18px;
+
+    text-align: center;
+
+    border: 1px solid var(--bright);
+}
+
+.br-next-eyebrow {
+    color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.br-next-pair {
+    font-size: 20px;
+
+    font-weight: bold;
+
+    letter-spacing: 2px;
+}
+
+.br-next-vs {
+    margin: 0 10px;
+
+    color: var(--muted);
+
+    font-weight: normal;
+}
+
+.br-next .main-button {
+    width: 100%;
+
+    margin: 6px 0 0;
+}
+
+.br-next-wait {
+    display: block;
+
+    border-color: var(--border);
+
+    color: var(--muted);
+
+    font-size: 12px;
+
+    letter-spacing: 1px;
+}
+
+.br-match-next {
+    border-color: var(--bright);
+
+    box-shadow: 0 0 0 1px var(--bright);
+}
+
+
+/* REGISTRATION */
+
+.reg-input-row {
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+}
+
+.reg-input-row input {
+    flex: 1;
+
+    min-width: 0;
+
+    padding: 12px;
+
+    border: 1px solid var(--border);
+    border-radius: 0;
+
+    outline: none;
+
+    background: var(--bg);
+    color: var(--text);
+
+    font-family: inherit;
+    font-size: 16px;
+}
+
+.reg-input-row input:focus {
+    border-color: var(--bright);
+}
+
+.reg-add {
+    width: 52px;
+
+    border: 1px solid var(--bright);
+
+    background: var(--bg);
+    color: var(--bright);
+
+    font-family: inherit;
+    font-size: 22px;
+
+    cursor: pointer;
+}
+
+.reg-add:hover {
+    background: var(--bright);
+    color: var(--bg);
+}
+
+.reg-list {
+    display: flex;
+
+    flex-direction: column;
+
+    border-top: 1px solid var(--border);
+}
+
+.reg-row {
+    display: grid;
+
+    grid-template-columns: 32px 1fr 32px;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 12px 0;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.reg-index {
+    color: var(--muted);
+
+    font-size: 12px;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.reg-name {
+    font-size: 15px;
+
+    letter-spacing: 1px;
+}
+
+.reg-remove {
+    width: 32px;
+    height: 32px;
+
+    padding: 0;
+
+    border: 1px solid var(--border);
+
+    background: transparent;
+    color: var(--muted);
+
+    font-family: inherit;
+    font-size: 16px;
+
+    cursor: pointer;
+}
+
+.reg-remove:hover {
+    border-color: var(--text);
+    color: var(--text);
+}
+
+.reg-empty {
+    padding: 20px 0;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.reg-hint {
+    margin: 16px 0 20px;
+
+    color: var(--muted);
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+}
+
+
+/* QUALIFYING */
+
+.q-heat {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    margin-bottom: 24px;
+
+    padding: 16px;
+
+    border: 1px solid var(--border);
+}
+
+.q-lane {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+}
+
+.q-lane-label {
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.q-lane-label.lane-1 {
+    color: #e04747;
+}
+
+.q-lane-label.lane-2 {
+    color: #4a86e8;
+}
+
+.q-lane select {
+    width: 100%;
+
+    padding: 10px;
+
+    font-size: 14px;
+}
+
+.q-heat .main-button {
+    width: 100%;
+
+    margin: 4px 0 0;
+}
+
+.q-table {
+    display: flex;
+
+    flex-direction: column;
+
+    margin-bottom: 24px;
+
+    border-top: 1px solid var(--border);
+}
+
+.q-row {
+    display: grid;
+
+    grid-template-columns: 34px 1fr auto;
+
+    align-items: baseline;
+
+    gap: 10px;
+
+    padding: 11px 0;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.q-rank {
+    color: var(--muted);
+
+    font-size: 12px;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.q-name {
+    font-size: 14px;
+
+    letter-spacing: 1px;
+}
+
+.q-time {
+    color: var(--text);
+
+    font-size: 13px;
+
+    font-weight: bold;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.q-row.q-out .q-rank,
+.q-row.q-out .q-name,
+.q-row.q-out .q-time {
+    color: var(--muted);
+}
+
+.q-row.q-in .q-rank {
+    color: var(--bright);
+}
+
+.q-row.q-pending .q-name {
+    color: var(--muted);
+}
+
+
+/* BRACKET */
+
+.br-champion {
+    margin-bottom: 24px;
+
+    padding-bottom: 20px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.champ {
+    margin-top: 8px;
+
+    font-size: 18px;
+
+    letter-spacing: 2px;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.champ-1 {
+    color: var(--bright);
+
+    font-weight: bold;
+}
+
+.champ-2,
+.champ-3 {
+    color: var(--muted);
+}
+
+.br-champion .main-button {
+    margin: 20px 0 0;
+
+    width: 100%;
+}
+
+.bracket-scroll {
+    margin: 0 -20px;
+
+    padding: 0 20px;
+
+    overflow-x: auto;
+}
+
+.bracket {
+    display: flex;
+
+    gap: 14px;
+
+    align-items: flex-start;
+
+    min-width: min-content;
+
+    padding-bottom: 8px;
+}
+
+.br-col {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    flex: 0 0 auto;
+
+    width: 150px;
+}
+
+.br-round-label {
+    color: var(--muted);
+
+    font-size: 9px;
+
+    letter-spacing: 2px;
+
+    white-space: nowrap;
+}
+
+.br-match {
+    border: 1px solid var(--border);
+}
+
+.br-match.br-playable {
+    border-color: var(--bright);
+}
+
+.br-side {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: baseline;
+
+    gap: 6px;
+
+    padding: 9px 10px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+
+    letter-spacing: 1px;
+}
+
+.br-side + .br-side {
+    border-top: 1px solid var(--border);
+}
+
+.br-side.br-win {
+    color: var(--bright);
+
+    font-weight: bold;
+}
+
+.br-side.br-lose {
+    color: var(--muted);
+
+    text-decoration: line-through;
+}
+
+.br-pname {
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+.br-ptime {
+    flex: 0 0 auto;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.br-play {
+    display: block;
+
+    width: 100%;
+
+    padding: 8px;
+
+    border: 0;
+    border-top: 1px solid var(--border);
+
+    background: var(--bright);
+    color: var(--bg);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    letter-spacing: 2px;
+
+    cursor: pointer;
+}
+
+
+/* SECONDARY LINK-STYLE BUTTON */
+
+.link-button {
+    display: block;
+
+    margin: 24px auto 0;
+
+    padding: 8px 4px;
+
+    border: 0;
+
+    background: transparent;
+    color: var(--muted);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    letter-spacing: 2px;
+
+    text-decoration: underline;
+
+    cursor: pointer;
+}
+
+.link-button:hover {
+    color: var(--text);
+}
+
+
+/* SIDEBAR — live standings during a tournament */
+
+#tournament-sidebar {
+    position: fixed;
+
+    top: 78px;
+    bottom: 84px;
+
+    left: max(16px, calc(50% - 545px));
+
+    width: 224px;
+
+    padding: 14px;
+
+    overflow-y: auto;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+}
+
+.sb-title {
+    margin-bottom: 12px;
+
+    padding-bottom: 10px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.sb-list {
+    display: flex;
+
+    flex-direction: column;
+}
+
+.sb-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 8px;
+
+    padding: 7px 0;
+
+    font-size: 11px;
+
+    letter-spacing: 0.5px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.sb-name {
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+.sb-val {
+    flex: 0 0 auto;
+
+    color: var(--muted);
+
+    font-variant-numeric: tabular-nums;
+}
+
+.sb-row.sb-dim {
+    color: var(--muted);
+}
+
+.sb-row.sb-dim .sb-val {
+    opacity: 0.6;
+}
+
+@media (max-width: 1180px) {
+
+    #tournament-sidebar {
+        display: none;
+    }
+}
+
+
+/* SMALL SCREEN */
 
 @media (max-width: 400px) {
 
-    .rider {
-        min-height: 210px;
-    }
-
-    .rider-content {
-        min-height: 210px;
-    }
-
     .speed span {
-        font-size: 56px;
+        font-size: 54px;
     }
 
     #status {
-        font-size: 25px;
-    }
-
-    #countdown-number {
-        font-size: 68vw;
+        font-size: 26px;
     }
 }
