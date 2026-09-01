@@ -1,10 +1,14 @@
 /* =========================================================================
    BLUETOOTH SENSORS
 
-   Connects real CYCPLUS-style speed/cadence sensors over Web Bluetooth using
-   the standard Cycling Speed and Cadence (CSC) GATT service, does the
-   speed/cadence maths in the browser, and streams the readings to the Go
-   server, which feeds them into the race in place of the simulation.
+   Connects real speed/cadence sensors over Web Bluetooth and streams the
+   readings to the Go server, which feeds them into the race in place of the
+   simulation.
+
+   Works with any sensor that speaks a Bluetooth SIG standard profile —
+   CYCPLUS, Magene, iGPSPORT, XOSS, Wahoo, Garmin, Bryton and the like — via
+   either the Cycling Speed and Cadence service (0x1816) or, as a fallback,
+   the wheel/crank fields of the Cycling Power service (0x1818).
 
    Web Bluetooth needs Chrome / Edge (not Firefox or Safari) and a secure
    context — http://localhost counts, a LAN IP does not.
@@ -17,6 +21,17 @@
 
 const CSC_SERVICE = "00001816-0000-1000-8000-00805f9b34fb"; // 0x1816
 const CSC_MEASUREMENT = "00002a5b-0000-1000-8000-00805f9b34fb"; // 0x2A5B
+
+const CP_SERVICE = "00001818-0000-1000-8000-00805f9b34fb"; // 0x1818
+const CP_MEASUREMENT = "00002a63-0000-1000-8000-00805f9b34fb"; // 0x2A63
+
+// Names to offer in the chooser for sensors that don't advertise their service
+// UUID. The service filters below catch everything else.
+const SENSOR_NAME_PREFIXES = [
+    "CYCPLUS", "CYC", "Magene", "MAGENE", "Mover", "iGPSPORT", "IGPSPORT",
+    "IGS", "SPD", "CAD", "XOSS", "CooSpo", "COOSPO", "Wahoo", "Garmin",
+    "Bryton", "BSC", "ELITE", "SPEED", "CADENCE"
+];
 
 // How long a wheel / crank can be silent before we call the reading zero.
 const WHEEL_IDLE_MS = 1500;
@@ -31,9 +46,11 @@ function newSensorState() {
         emulating: false,
         emuTimer: null,
 
-        // previous CSC reading, for deltas
+        profile: "csc", // "csc" | "cp"
+
+        // previous reading, for deltas
         prevWheelRevs: null,
-        prevWheelTime: null, // uint16, units of 1/1024 s
+        prevWheelTime: null, // uint16 event-time ticks
         prevCrankRevs: null,
         prevCrankTime: null,
 
@@ -65,17 +82,19 @@ async function connectSensor(rider, acceptAll) {
 
     let device;
 
+    const optionalServices = [CSC_SERVICE, CP_SERVICE];
+
     try {
         device = await navigator.bluetooth.requestDevice(
             acceptAll
-                ? { acceptAllDevices: true, optionalServices: [CSC_SERVICE] }
+                ? { acceptAllDevices: true, optionalServices }
                 : {
                     filters: [
                         { services: [CSC_SERVICE] },
-                        { namePrefix: "CYCPLUS" },
-                        { namePrefix: "CYC" }
+                        { services: [CP_SERVICE] },
+                        ...SENSOR_NAME_PREFIXES.map((namePrefix) => ({ namePrefix }))
                     ],
-                    optionalServices: [CSC_SERVICE]
+                    optionalServices
                 }
         );
     } catch (err) {
@@ -108,8 +127,20 @@ async function attach(rider) {
     setStatus(rider, `подключение к ${st.device.name || "датчику"}...`);
 
     const server = await st.device.gatt.connect();
-    const service = await server.getPrimaryService(CSC_SERVICE);
-    const ch = await service.getCharacteristic(CSC_MEASUREMENT);
+
+    // Prefer the Cycling Speed and Cadence service; fall back to the wheel/crank
+    // fields of the Cycling Power service for sensors that only expose that.
+    let ch;
+
+    try {
+        const svc = await server.getPrimaryService(CSC_SERVICE);
+        ch = await svc.getCharacteristic(CSC_MEASUREMENT);
+        st.profile = "csc";
+    } catch (cscErr) {
+        const svc = await server.getPrimaryService(CP_SERVICE);
+        ch = await svc.getCharacteristic(CP_MEASUREMENT);
+        st.profile = "cp";
+    }
 
     st.characteristic = ch;
     ch.addEventListener("characteristicvaluechanged", (e) =>
@@ -122,7 +153,10 @@ async function attach(rider) {
     st.connected = true;
 
     window.raceApp.setBleSource(rider, true);
-    setStatus(rider, `подключён: ${st.device.name || "датчик"}`);
+    setStatus(
+        rider,
+        `подключён: ${st.device.name || "датчик"} · ${st.profile.toUpperCase()}`
+    );
     updateTag(rider);
 }
 
@@ -197,38 +231,85 @@ function resetDeltas(st) {
 }
 
 
-/* ---- CSC measurement parsing ------------------------------------------------
+/* ---- measurement parsing --------------------------------------------------
 
-   Layout: flags(uint8)
-           if flags bit0: cumulativeWheelRevolutions(uint32) lastWheelEventTime(uint16)
-           if flags bit1: cumulativeCrankRevolutions(uint16) lastCrankEventTime(uint16)
-   Event times are in 1/1024 s and wrap at 65536.
---------------------------------------------------------------------------- */
+   CSC Measurement (0x2A5B):
+     flags(uint8)
+     bit0: cumWheelRevs(uint32) lastWheelEventTime(uint16, 1/1024 s)
+     bit1: cumCrankRevs(uint16) lastCrankEventTime(uint16, 1/1024 s)
 
-function onMeasurement(rider, view) {
+   Cycling Power Measurement (0x2A63):
+     flags(uint16) instPower(sint16)
+     bit0: pedalPowerBalance(uint8)
+     bit2: accumulatedTorque(uint16)
+     bit4: cumWheelRevs(uint32) lastWheelEventTime(uint16, 1/2048 s)
+     bit5: cumCrankRevs(uint16) lastCrankEventTime(uint16, 1/1024 s)
 
-    const st = sensors[rider];
+   Both event-time fields are uint16 and wrap at 65536.
+------------------------------------------------------------------------- */
+
+function parseCSC(view) {
     const flags = view.getUint8(0);
-    const now = performance.now();
+    let off = 1;
 
-    let offset = 1;
+    const r = { wheelHz: 1024, crankHz: 1024 };
 
     if (flags & 0x01) {
-        const wheelRevs = view.getUint32(offset, true);
-        offset += 4;
-        const wheelTime = view.getUint16(offset, true);
-        offset += 2;
+        r.wheelRevs = view.getUint32(off, true); off += 4;
+        r.wheelTicks = view.getUint16(off, true); off += 2;
+    }
+    if (flags & 0x02) {
+        r.crankRevs = view.getUint16(off, true); off += 2;
+        r.crankTicks = view.getUint16(off, true); off += 2;
+    }
+    return r;
+}
+
+function parseCP(view) {
+    const flags = view.getUint16(0, true);
+    let off = 2 + 2; // flags + instantaneous power
+
+    if (flags & 0x0001) off += 1; // pedal power balance
+    if (flags & 0x0004) off += 2; // accumulated torque
+
+    const r = { wheelHz: 2048, crankHz: 1024 };
+
+    if (flags & 0x0010) {
+        r.wheelRevs = view.getUint32(off, true); off += 4;
+        r.wheelTicks = view.getUint16(off, true); off += 2;
+    }
+    if (flags & 0x0020) {
+        r.crankRevs = view.getUint16(off, true); off += 2;
+        r.crankTicks = view.getUint16(off, true); off += 2;
+    }
+    return r;
+}
+
+function onMeasurement(rider, view) {
+    const r = sensors[rider].profile === "cp" ? parseCP(view) : parseCSC(view);
+    applyReading(rider, r);
+}
+
+// applyReading turns a parsed { wheelRevs, wheelTicks, wheelHz, crankRevs,
+// crankTicks, crankHz } into speed and cadence, whatever profile it came from.
+function applyReading(rider, r) {
+
+    const st = sensors[rider];
+    const now = performance.now();
+
+    if (r.wheelRevs != null) {
 
         st.hasWheel = true;
-        st.rawWheelRevs = wheelRevs;
+        st.rawWheelRevs = r.wheelRevs;
 
         if (st.prevWheelRevs != null) {
-            const dRevs = (wheelRevs - st.prevWheelRevs) >>> 0;
-            const dTicks = (wheelTime - st.prevWheelTime + 65536) % 65536;
+            // The wheel counter is a 32-bit cumulative total — in practice it
+            // never wraps, so a negative delta means the sensor reset. Skip it.
+            const dRevs = r.wheelRevs - st.prevWheelRevs;
+            const dTicks = (r.wheelTicks - st.prevWheelTime + 65536) % 65536;
 
-            // A changed event time means at least one new wheel revolution.
-            if (dTicks > 0 && dRevs > 0) {
-                const dt = dTicks / 1024;
+            if (dRevs >= 0 && dTicks > 0 && dRevs > 0) {
+                const dt = dTicks / r.wheelHz;
                 const circ = window.raceApp.wheelCircumferenceMM(rider) / 1000; // m
                 st.speed = (dRevs * circ / dt) * 3.6; // km/h
                 st.lastWheelMove = now;
@@ -237,32 +318,28 @@ function onMeasurement(rider, view) {
             st.lastWheelMove = now;
         }
 
-        st.prevWheelRevs = wheelRevs;
-        st.prevWheelTime = wheelTime;
+        st.prevWheelRevs = r.wheelRevs;
+        st.prevWheelTime = r.wheelTicks;
     }
 
-    if (flags & 0x02) {
-        const crankRevs = view.getUint16(offset, true);
-        offset += 2;
-        const crankTime = view.getUint16(offset, true);
-        offset += 2;
+    if (r.crankRevs != null) {
 
         st.hasCrank = true;
 
         if (st.prevCrankRevs != null) {
-            const dRevs = (crankRevs - st.prevCrankRevs + 65536) % 65536;
-            const dTicks = (crankTime - st.prevCrankTime + 65536) % 65536;
+            const dRevs = (r.crankRevs - st.prevCrankRevs + 65536) % 65536;
+            const dTicks = (r.crankTicks - st.prevCrankTime + 65536) % 65536;
 
             if (dTicks > 0 && dRevs > 0) {
-                st.cadence = (dRevs * 60) / (dTicks / 1024); // rpm
+                st.cadence = (dRevs * 60) / (dTicks / r.crankHz); // rpm
                 st.lastCrankMove = now;
             }
         } else {
             st.lastCrankMove = now;
         }
 
-        st.prevCrankRevs = crankRevs;
-        st.prevCrankTime = crankTime;
+        st.prevCrankRevs = r.crankRevs;
+        st.prevCrankTime = r.crankTicks;
     }
 
     push(rider);
@@ -325,9 +402,15 @@ function startEmulation(rider) {
         return;
     }
 
+    if (st.emuTimer) {
+        clearInterval(st.emuTimer);
+        st.emuTimer = null;
+    }
+
     resetDeltas(st);
     st.emulating = true;
     st.connected = false;
+    st.profile = "csc";
     st.hasWheel = true;
     st.hasCrank = true;
 
@@ -335,52 +418,70 @@ function startEmulation(rider) {
     setStatus(rider, "ЭМУЛЯЦИЯ — тест без датчика");
     updateTag(rider);
 
-    const wheelRevPerSec = 3.7 + Math.random() * 1.6; // ~28-42 km/h at 2.1 m
-    const crankRevPerSec = 1.3 + Math.random() * 0.4; // ~80-100 rpm
+    const wheelTargetRps = 3.7 + Math.random() * 1.6; // ~28-42 km/h at 2.1 m
+    const crankTargetRps = 1.3 + Math.random() * 0.4; // ~80-100 rpm
 
     const wheelRevs0 = 1000 + Math.floor(Math.random() * 500);
     const crankRevs0 = 500;
 
+    // Rides like a real trainer: spins up quickly, coasts down slowly. The rider
+    // warms up (READY), lets the wheel coast during the countdown, and goes on
+    // GO. Set st.emuJumpTheGun to add power mid-countdown and trip the
+    // false-start detection.
+    let wheelRps = 0;
+    let crankRps = 0;
+    let wheelAccum = wheelRevs0;
+    let crankAccum = crankRevs0;
     let wheelInt = wheelRevs0;
     let crankInt = crankRevs0;
     let wheelEventTicks = 0;
     let crankEventTicks = 0;
-
-    // spinSec is time the emulated wheel has actually been turning. The rider
-    // spins to check the sensor (READY), holds still at the line (countdown),
-    // and goes on GO (running). Set st.emuJumpTheGun to keep spinning through
-    // the countdown and test the false-start detection.
-    let spinSec = 0;
+    let simTicks = 0; // 1/1024 s
+    let countdownSec = 0;
     let lastMs = performance.now();
+
+    const approach = (cur, target, upRate, downRate, dt) => {
+        const rate = target > cur ? upRate : downRate;
+        const step = rate * dt;
+        return Math.abs(target - cur) <= step
+            ? target
+            : cur + Math.sign(target - cur) * step;
+    };
 
     st.emuTimer = setInterval(() => {
         const nowMs = performance.now();
-        const wall = (nowMs - lastMs) / 1000;
+        const dt = Math.min((nowMs - lastMs) / 1000, 2);
         lastMs = nowMs;
 
-        const spinning =
-            st.emuJumpTheGun ||
-            window.raceApp.state === "ready" ||
-            window.raceApp.state === "running";
+        const appState = window.raceApp.state;
+        const inCountdown = appState === "countdown";
+        countdownSec = inCountdown ? countdownSec + dt : 0;
 
-        if (spinning) {
-            spinSec += wall;
+        let spin = appState === "ready" || appState === "running";
+        if (inCountdown && st.emuJumpTheGun && countdownSec > 0.9) {
+            spin = true; // the "jump": add power partway through the countdown
         }
 
-        const wheelRevsF = wheelRevs0 + wheelRevPerSec * spinSec;
-        const crankRevsF = crankRevs0 + crankRevPerSec * spinSec;
+        const wheelTarget = spin ? wheelTargetRps : 0;
+        const crankTarget = spin ? crankTargetRps : 0;
 
-        // Advance each event time only while turning — a still wheel reports the
-        // same last-event time, which the parser reads as speed zero.
-        if (Math.floor(wheelRevsF) > wheelInt) {
-            wheelInt = Math.floor(wheelRevsF);
-            const secAgo = (wheelRevsF - wheelInt) / wheelRevPerSec;
-            wheelEventTicks = Math.round((spinSec - secAgo) * 1024) % 65536;
+        // rev/s^2: quick to spin up, slow to coast down
+        wheelRps = approach(wheelRps, wheelTarget, 6, 1.3, dt);
+        crankRps = approach(crankRps, crankTarget, 4, 1.0, dt);
+
+        wheelAccum += wheelRps * dt;
+        crankAccum += crankRps * dt;
+        simTicks = (simTicks + Math.round(dt * 1024)) % 65536;
+
+        // The event time only advances while the wheel / crank is actually
+        // turning; once stopped it holds, which the parser reads as zero speed.
+        if (Math.floor(wheelAccum) > wheelInt) {
+            wheelInt = Math.floor(wheelAccum);
+            wheelEventTicks = simTicks;
         }
-        if (Math.floor(crankRevsF) > crankInt) {
-            crankInt = Math.floor(crankRevsF);
-            const secAgo = (crankRevsF - crankInt) / crankRevPerSec;
-            crankEventTicks = Math.round((spinSec - secAgo) * 1024) % 65536;
+        if (Math.floor(crankAccum) > crankInt) {
+            crankInt = Math.floor(crankAccum);
+            crankEventTicks = simTicks;
         }
 
         const dv = new DataView(new ArrayBuffer(11));
@@ -391,7 +492,7 @@ function startEmulation(rider) {
         dv.setUint16(9, crankEventTicks, true);
 
         onMeasurement(rider, dv);
-    }, 500);
+    }, 400);
 }
 
 function stopEmulation(rider) {

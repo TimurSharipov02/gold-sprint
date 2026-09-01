@@ -23,10 +23,17 @@ const (
 	minWheel     = 1000
 	maxWheel     = 3000
 
-	// A lane that rolls more than this far during the countdown is a rider who
-	// jumped the start. Measured from wheel revolutions, so a stale speed
-	// reading from a wheel that has actually stopped doesn't trigger it.
-	falseStartDistance = 3.0
+	// A false start is a rider who speeds *up* during the countdown — a wheel
+	// coasting down from a warm-up spin only ever slows, so it never triggers.
+	// The rider is flagged once their speed climbs this many km/h above the
+	// slowest they were seen going since the countdown began, for two ticks
+	// running.
+	falseStartAccel        = 4.0
+	falseStartConfirmTicks = 2
+
+	// Ticks (at 100ms) to ignore at the start of the countdown while the first
+	// readings settle.
+	falseStartGraceTicks = 4
 )
 
 type Command struct {
@@ -228,6 +235,11 @@ func runRaceLoop(
 	// readings are live, and re-applied whenever the race returns to Ready.
 	var desiredRemote [2]bool
 
+	// Per-lane countdown tracking for false-start detection.
+	var minSpeed [2]float64
+	var jumpTicks [2]int
+	var countdownTicks int
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -256,6 +268,10 @@ func runRaceLoop(
 			for _, r := range riders {
 				r.Reset()
 			}
+
+			minSpeed = [2]float64{9999, 9999}
+			jumpTicks = [2]int{}
+			countdownTicks = 0
 
 			raceEngine.Start()
 
@@ -289,10 +305,27 @@ func runRaceLoop(
 
 			switch state {
 			case race.StateCountdown:
-				// A rider whose wheel has rolled forward is jumping the start.
-				for _, r := range riders {
-					if r.Distance() > falseStartDistance {
-						raceEngine.FalseStart(r.ID)
+				countdownTicks++
+
+				// A rider who speeds up is jumping the start; one who is only
+				// coasting down from a warm-up spin never does.
+				if countdownTicks > falseStartGraceTicks {
+					for i, r := range riders {
+						s := r.Speed()
+
+						if s < minSpeed[i] {
+							minSpeed[i] = s
+						}
+
+						if s > minSpeed[i]+falseStartAccel {
+							jumpTicks[i]++
+						} else {
+							jumpTicks[i] = 0
+						}
+
+						if jumpTicks[i] >= falseStartConfirmTicks {
+							raceEngine.FalseStart(r.ID)
+						}
 					}
 				}
 

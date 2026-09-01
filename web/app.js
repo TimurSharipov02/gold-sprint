@@ -8,6 +8,11 @@ console.log("GOLD SPRINT APP LOADED");
 const raceScreen = document.getElementById("race-screen");
 const setupScreen = document.getElementById("setup-screen");
 
+// The race view (status + riders + START) is a movable block: it sits in the
+// RACE tab for a free race, and is relocated into the TOURNAMENT tab during a
+// heat so the tournament stays self-contained.
+const raceView = document.getElementById("race-view");
+
 const navRace = document.getElementById("nav-race");
 const navSetup = document.getElementById("nav-setup");
 
@@ -62,6 +67,9 @@ const tournamentScreen =
 
 const tournamentBody =
     document.getElementById("tournament-body");
+
+const tournamentRaceSlot =
+    document.getElementById("tournament-race-slot");
 
 const tournamentSidebar =
     document.getElementById("tournament-sidebar");
@@ -134,6 +142,11 @@ let raceDistance = settings.distance;
 // for the pre-start sensor check.
 let raceState = "ready";
 
+// A heat's race leaves the server in "finished". When the race view returns to
+// the RACE tab, that stale result isn't a free race — ignore it until the next
+// countdown.
+let ignoreStaleFinish = false;
+
 
 /* =========================
    WEBSOCKET
@@ -200,7 +213,34 @@ let currentScreen = "race";
 let screenBeforeSetup = "race";
 
 
+// updateHeatLayout keeps the movable race view in the right tab: inside the
+// tournament screen while a heat is on, back in the race screen otherwise.
+function updateHeatLayout() {
+
+    if (tournament.heat) {
+
+        if (raceView.parentElement !== tournamentRaceSlot) {
+            tournamentRaceSlot.appendChild(raceView);
+        }
+        tournamentBody.hidden = true;
+
+    } else {
+
+        if (raceView.parentElement !== raceScreen) {
+            raceScreen.appendChild(raceView);
+        }
+        tournamentBody.hidden = false;
+    }
+}
+
+
 function showScreen(screen) {
+
+    // A running heat lives in the tournament tab — the RACE tab is only ever a
+    // free race.
+    if (screen === "race" && tournament.heat) {
+        screen = "tournament";
+    }
 
     if (screen === "setup" && currentScreen !== "setup") {
         screenBeforeSetup = currentScreen;
@@ -375,12 +415,14 @@ function updateRider(data) {
 
     const staged = raceScreenStaged();
     const live = data.source === "ble";
+    const racing =
+        !staged && (raceState === "running" || raceState === "finished");
 
-    // Speed and cadence show live so a rider can spin up and check the sensor,
-    // trainer and rig before the start — including between tournament heats.
-    // While a heat is staged, only a real sensor's readings are trustworthy
-    // (a simulated lane would just show its last frozen value).
-    const showReadings = !staged || live;
+    // A real sensor's speed/cadence show at all times, so a rider can spin up
+    // and check the sensor, trainer and rig before the start. A simulated lane
+    // has nothing to check, so its readings only show while a race is on —
+    // otherwise it would sit on a frozen leftover value.
+    const showReadings = live || racing;
 
     document.getElementById(
         `speed-${rider}`
@@ -396,18 +438,14 @@ function updateRider(data) {
 
     // Distance and progress only count once the race is actually running — never
     // before START, during the countdown, or while a heat is staged.
-    const counting =
-        !staged && (raceState === "running" || raceState === "finished");
-
-
     document.getElementById(
         `distance-${rider}`
     ).textContent =
-        counting ? data.distance.toFixed(1) : "0.0";
+        racing ? data.distance.toFixed(1) : "0.0";
 
 
     const progress =
-        counting
+        racing
             ? Math.min(data.distance / raceDistance * 100, 100)
             : 0;
 
@@ -589,11 +627,21 @@ overlay.addEventListener(
 function handleRaceData(data) {
 
     raceDistance = data.distance;
-    raceState = data.state;
+
+    // A fresh countdown clears the "this finished race belongs to a past heat"
+    // suppression; until then a lingering "finished" reads as "ready".
+    if (data.state === "countdown") {
+        ignoreStaleFinish = false;
+    }
+
+    const state =
+        ignoreStaleFinish && data.state !== "countdown" ? "ready" : data.state;
+
+    raceState = state;
 
     // Once a race is under way, trust the server's distance for the "/ N M"
     // labels. Before it, SETUP-save and the tournament heat set them.
-    if (data.state !== "ready") {
+    if (state !== "ready") {
         updateRaceDistance();
     }
 
@@ -604,13 +652,13 @@ function handleRaceData(data) {
 
         startButton.disabled = false;
 
-        if (data.state !== "countdown") {
+        if (state !== "countdown") {
             return;
         }
     }
 
 
-    switch (data.state) {
+    switch (state) {
 
         case "ready":
 
@@ -897,6 +945,11 @@ function resetTournament() {
     nextParticipantId = 1;
 
     clearLaneLabels();
+    resetRaceScreen();
+    updateHeatLayout();
+
+    ignoreStaleFinish = true;
+    raceState = "ready";
 
     saveTournament();
     renderTournament();
@@ -1321,14 +1374,14 @@ function updateRaceHeatBanner() {
     const n2 = heat.lane2 != null ? escapeHtml(participantName(heat.lane2)) : "—";
 
     raceHeat.innerHTML = `
-        <span class="race-heat-round">ТУРНИР · ${heatRoundName()} · ${heat.distance} M</span>
+        <span class="race-heat-round">${heatRoundName()} · ${heat.distance} M</span>
         <span class="race-heat-pair">
             <span class="lane-1">${n1}</span>
             <span class="race-heat-vs">/</span>
             <span class="lane-2">${n2}</span>
         </span>
         <button class="race-heat-exit" id="exit-heat-btn" type="button">
-            выйти в свободную гонку
+            ← к сетке
         </button>
     `;
 
@@ -1336,25 +1389,31 @@ function updateRaceHeatBanner() {
 }
 
 
-// Escape hatch: drop out of the current tournament heat and put the race screen
-// back into plain free-race mode. A fallback if a heat gets stuck.
-function exitHeat() {
+// Abandon the current heat without recording anything and return to the
+// bracket. Also the way out if a heat ever gets stuck.
+function cancelHeat() {
 
     tournament.heat = null;
 
     clearLaneLabels();
     resetRaceScreen();
+    updateHeatLayout();
 
+    ignoreStaleFinish = true;
+    raceState = "ready";
     statusEl.textContent = "READY";
 
     saveTournament();
+    renderTournament();
     updateSidebar();
+
+    showScreen("tournament");
 }
 
 
 raceHeat.addEventListener("click", (event) => {
     if (event.target.id === "exit-heat-btn") {
-        exitHeat();
+        cancelHeat();
     }
 });
 
@@ -1388,10 +1447,14 @@ function startHeat(mode, opts) {
     // progress and overlay. raceScreenStaged() then keeps the previous race's
     // trailing messages from repainting until this heat's own countdown starts.
     resetRaceScreen();
+    ignoreStaleFinish = false;
+
+    // The race view slides into the tournament tab for the heat.
+    updateHeatLayout();
 
     saveTournament();
 
-    showScreen("race");
+    showScreen("tournament");
 
     statusEl.textContent = `${heatRoundName()} — НАЖМИТЕ START`;
 }
@@ -1575,6 +1638,14 @@ function endTournamentHeat() {
     tournament.heat = null;
 
     clearLaneLabels();
+    resetRaceScreen();
+    updateHeatLayout();
+
+    // The server still reports the heat's finished race; the RACE tab must not
+    // show it as a free-race result.
+    ignoreStaleFinish = true;
+    raceState = "ready";
+    statusEl.textContent = "READY";
 
     saveTournament();
     renderTournament();
@@ -1918,8 +1989,11 @@ function updateSidebar() {
         return;
     }
 
+    // Standings show next to the race view during a heat, and next to a free
+    // race run while a tournament is in progress.
     const show =
-        tournament.phase !== "idle" && currentScreen === "race";
+        tournament.heat != null ||
+        (tournament.phase !== "idle" && currentScreen === "race");
 
     tournamentSidebar.classList.toggle("hidden", !show);
 
@@ -2057,6 +2131,7 @@ tournamentBody.addEventListener("keydown", (event) => {
 
 loadTournament();
 renderTournament();
+updateHeatLayout();
 
 updateRaceDistance();
 

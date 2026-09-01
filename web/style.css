@@ -2,6 +2,10 @@
     box-sizing: border-box;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 :root {
     --bg: #080808;
     --panel: #101010;
@@ -1495,20 +1499,38 @@ select {
 }
 
 
-/* SETUP — sensor rows */
+/* SETUP — per-rider config (sensor + wheel) */
 
-.sensor-row {
-    padding: 16px 0;
+.rider-config {
+    padding: 20px 0 8px;
 
     border-top: 1px solid var(--border);
 }
 
-.sensor-row .rider-setting-title {
-    margin-bottom: 8px;
+.rider-config .rider-setting-title {
+    margin-bottom: 14px;
+
+    font-size: 13px;
+
+    letter-spacing: 2px;
+}
+
+.cfg-label {
+    margin: 18px 0 8px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+.rider-config .cfg-label:first-of-type {
+    margin-top: 0;
 }
 
 .ble-note {
-    margin: 8px 0 4px;
+    margin: 4px 0 20px;
 
     color: var(--muted);
 
