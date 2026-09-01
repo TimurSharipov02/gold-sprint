@@ -27,6 +27,10 @@ type Race struct {
 
 	Countdown int
 
+	// FalseStartRider is the rider that jumped the countdown on the most recent
+	// aborted start, or 0. Cleared by the next Start.
+	FalseStartRider int
+
 	StartTime  time.Time
 	FinishTime map[int]time.Time
 	Winner     int
@@ -52,6 +56,7 @@ func (r *Race) Start() {
 	r.State = StateCountdown
 	r.Countdown = 3
 
+	r.FalseStartRider = 0
 	r.FinishTime = make(map[int]time.Time)
 	r.Winner = 0
 
@@ -72,7 +77,8 @@ func (r *Race) startRunning() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// A new race may have been requested while we were counting down.
+	// A new race may have been requested, or the countdown aborted on a false
+	// start, while we were counting down.
 	if r.State != StateCountdown {
 		return
 	}
@@ -80,6 +86,31 @@ func (r *Race) startRunning() {
 	r.State = StateRunning
 	r.StartTime = time.Now()
 	r.Countdown = 0
+}
+
+// FalseStart aborts an in-progress countdown because a rider started pedalling
+// early, dropping back to Ready so the start can be re-run. It reports whether
+// there was a countdown to abort.
+func (r *Race) FalseStart(rider int) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.State != StateCountdown {
+		return false
+	}
+
+	r.State = StateReady
+	r.Countdown = 0
+	r.FalseStartRider = rider
+
+	return true
+}
+
+func (r *Race) GetFalseStart() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.FalseStartRider
 }
 
 func (r *Race) Finish(rider int) {

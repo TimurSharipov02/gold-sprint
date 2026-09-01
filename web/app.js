@@ -108,8 +108,22 @@ window.raceApp = {
         return settings.wheels[rider] || 2105;
     },
 
+    get state() {
+        return raceState;
+    },
+
     setBleSource(rider, active) {
         bleSources[rider] = Boolean(active);
+
+        // Tell the server right away so the lane's live readings show during the
+        // pre-start check, not only once a race begins.
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: "source",
+                rider,
+                source: active ? "ble" : "mock"
+            }));
+        }
     }
 };
 
@@ -117,6 +131,11 @@ window.raceApp = {
 // Authoritative race distance, kept in sync with the server so the progress
 // bars match the distance the race is actually run at.
 let raceDistance = settings.distance;
+
+// Latest race state from the server. Distance and the progress bar only move
+// once this is "running"; before that the screen still shows live speed/cadence
+// for the pre-start sensor check.
+let raceState = "ready";
 
 
 /* =========================
@@ -356,6 +375,8 @@ function updateRider(data) {
         data.rider;
 
 
+    // Speed and cadence are always live, so a rider can spin up and check the
+    // sensor / trainer before the start.
     document.getElementById(
         `speed-${rider}`
     ).textContent =
@@ -368,19 +389,22 @@ function updateRider(data) {
         Math.round(data.cadence);
 
 
+    // Distance and progress only count once the race is actually running — not
+    // before START and not during the countdown.
+    const counting =
+        raceState === "running" || raceState === "finished";
+
+
     document.getElementById(
         `distance-${rider}`
     ).textContent =
-        data.distance.toFixed(1);
+        counting ? data.distance.toFixed(1) : "0.0";
 
 
     const progress =
-        Math.min(
-            data.distance /
-            raceDistance *
-            100,
-            100
-        );
+        counting
+            ? Math.min(data.distance / raceDistance * 100, 100)
+            : 0;
 
 
     document.getElementById(
@@ -411,6 +435,10 @@ let lastCountdownShown = null;
 // Once the viewer taps the result away, the race stays in the "finished" state
 // on the server, so this flag stops us from re-showing the overlay.
 let resultDismissed = false;
+
+// Same idea for the false-start overlay: the server keeps reporting the false
+// start in the "ready" state until the next countdown clears it.
+let falseStartDismissed = false;
 
 
 function showCountdown(value) {
@@ -469,6 +497,39 @@ function showResult(colorLane, label, line1, line2) {
 }
 
 
+// showFalseStart drives the overlay when a rider jumps the countdown. The race
+// drops back to READY and nothing is recorded — the start is simply re-run.
+function showFalseStart(rider) {
+
+    overlay.classList.remove(
+        "hidden",
+        "is-countdown",
+        "is-result",
+        "winner-1",
+        "winner-2"
+    );
+
+    overlay.classList.add("is-falsestart");
+
+    overlayCountdown.classList.add("hidden");
+    overlayResult.classList.remove("hidden");
+
+    const name = tournament.heat
+        ? nameForHeatLane(rider)
+        : `RIDER ${String(rider).padStart(2, "0")}`;
+
+    overlayResultLabel.textContent = "ФАЛЬСТАРТ";
+    overlayResultRider.textContent = name;
+    overlayResultTime.textContent = "начал раньше — старт заново";
+}
+
+
+function nameForHeatLane(lane) {
+    const id = lane === 1 ? tournament.heat.lane1 : tournament.heat.lane2;
+    return id != null ? participantName(id) : `RIDER ${String(lane).padStart(2, "0")}`;
+}
+
+
 function hideOverlay() {
 
     overlay.classList.add("hidden");
@@ -476,6 +537,7 @@ function hideOverlay() {
     overlay.classList.remove(
         "is-countdown",
         "is-result",
+        "is-falsestart",
         "winner-1",
         "winner-2"
     );
@@ -487,6 +549,18 @@ function hideOverlay() {
 overlay.addEventListener(
     "click",
     () => {
+
+        if (overlay.classList.contains("is-falsestart")) {
+
+            falseStartDismissed = true;
+            hideOverlay();
+
+            statusEl.textContent = tournament.heat
+                ? `${heatRoundName()} — НАЖМИТЕ START`
+                : "READY";
+
+            return;
+        }
 
         if (!overlay.classList.contains("is-result")) {
             return;
@@ -510,6 +584,13 @@ overlay.addEventListener(
 function handleRaceData(data) {
 
     raceDistance = data.distance;
+    raceState = data.state;
+
+    // Once a race is under way, trust the server's distance for the "/ N M"
+    // labels. Before it, SETUP-save and the tournament heat set them.
+    if (data.state !== "ready") {
+        updateRaceDistance();
+    }
 
     // While a heat is staged, the previous race's messages don't apply here.
     // Keep START available for this heat and ignore everything but the countdown
@@ -529,18 +610,25 @@ function handleRaceData(data) {
 
         case "ready":
 
-            statusEl.textContent =
-                "READY";
-
             startButton.disabled =
                 false;
 
             distanceSelect.disabled =
                 false;
 
-            resultDismissed = false;
+            if (data.falseStart > 0 && !falseStartDismissed) {
 
-            hideOverlay();
+                statusEl.textContent =
+                    `ФАЛЬСТАРТ · RIDER ${String(data.falseStart).padStart(2, "0")}`;
+
+                showFalseStart(data.falseStart);
+
+            } else {
+
+                statusEl.textContent = "READY";
+                resultDismissed = false;
+                hideOverlay();
+            }
 
             break;
 
@@ -557,6 +645,7 @@ function handleRaceData(data) {
                 true;
 
             resultDismissed = false;
+            falseStartDismissed = false;
 
             // A countdown only follows a fresh START, so this is the signal that
             // the tournament heat's own race has begun — from here its result

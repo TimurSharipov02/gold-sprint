@@ -28,6 +28,7 @@ type RemoteSensor struct {
 	rawWheelRevs float64
 	baselineRevs float64
 	haveBaseline bool
+	hasReading   bool
 
 	lastPush time.Time
 	now      func() time.Time // swappable for tests
@@ -46,25 +47,43 @@ func (s *RemoteSensor) Push(speed, cadence, wheelRevs float64) {
 	s.cadence = cadence
 	s.rawWheelRevs = wheelRevs
 
-	if !s.haveBaseline {
+	// Adopt the counter as the baseline on the very first reading, or when Reset
+	// deferred the baseline because no data had arrived yet.
+	if !s.hasReading || !s.haveBaseline {
 		s.baselineRevs = wheelRevs
 		s.haveBaseline = true
 	}
 
+	s.hasReading = true
 	s.lastPush = s.now()
 }
 
-// Reset re-zeros the distance counter for a new race. The baseline is taken from
-// the next reading rather than now, so a race that starts before any data has
-// arrived still measures distance from zero.
+// Reset re-zeros the distance counter for a new race — from the last known
+// reading, or deferred to the next one if the sensor hasn't reported yet (a
+// race that starts before any data still measures from zero).
 func (s *RemoteSensor) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.speed = 0
 	s.cadence = 0
-	s.haveBaseline = false
+
+	if s.hasReading {
+		s.baselineRevs = s.rawWheelRevs
+		s.haveBaseline = true
+	} else {
+		s.haveBaseline = false
+	}
+}
+
+// Rebase zeroes the distance counter at the current reading. Used at the exact
+// countdown→running moment so any warm-up or pre-roll revolutions don't count.
+func (s *RemoteSensor) Rebase() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.baselineRevs = s.rawWheelRevs
+	s.haveBaseline = true
 }
 
 // Update has nothing to advance — data arrives asynchronously — but it drops a

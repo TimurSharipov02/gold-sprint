@@ -338,7 +338,6 @@ function startEmulation(rider) {
     const wheelRevPerSec = 3.7 + Math.random() * 1.6; // ~28-42 km/h at 2.1 m
     const crankRevPerSec = 1.3 + Math.random() * 0.4; // ~80-100 rpm
 
-    const startMs = performance.now();
     const wheelRevs0 = 1000 + Math.floor(Math.random() * 500);
     const crankRevs0 = 500;
 
@@ -347,24 +346,41 @@ function startEmulation(rider) {
     let wheelEventTicks = 0;
     let crankEventTicks = 0;
 
-    // Everything is derived from real elapsed time, so the emulated speed stays
-    // correct even if the browser throttles this timer in a background tab.
-    st.emuTimer = setInterval(() => {
-        const elapsed = (performance.now() - startMs) / 1000;
-        const wheelRevsF = wheelRevs0 + wheelRevPerSec * elapsed;
-        const crankRevsF = crankRevs0 + crankRevPerSec * elapsed;
+    // spinSec is time the emulated wheel has actually been turning. The rider
+    // spins to check the sensor (READY), holds still at the line (countdown),
+    // and goes on GO (running). Set st.emuJumpTheGun to keep spinning through
+    // the countdown and test the false-start detection.
+    let spinSec = 0;
+    let lastMs = performance.now();
 
-        // Advance each event time to when its most recent whole revolution
-        // actually happened — that is how a real CSC sensor reports it.
+    st.emuTimer = setInterval(() => {
+        const nowMs = performance.now();
+        const wall = (nowMs - lastMs) / 1000;
+        lastMs = nowMs;
+
+        const spinning =
+            st.emuJumpTheGun ||
+            window.raceApp.state === "ready" ||
+            window.raceApp.state === "running";
+
+        if (spinning) {
+            spinSec += wall;
+        }
+
+        const wheelRevsF = wheelRevs0 + wheelRevPerSec * spinSec;
+        const crankRevsF = crankRevs0 + crankRevPerSec * spinSec;
+
+        // Advance each event time only while turning — a still wheel reports the
+        // same last-event time, which the parser reads as speed zero.
         if (Math.floor(wheelRevsF) > wheelInt) {
             wheelInt = Math.floor(wheelRevsF);
             const secAgo = (wheelRevsF - wheelInt) / wheelRevPerSec;
-            wheelEventTicks = Math.round((elapsed - secAgo) * 1024) % 65536;
+            wheelEventTicks = Math.round((spinSec - secAgo) * 1024) % 65536;
         }
         if (Math.floor(crankRevsF) > crankInt) {
             crankInt = Math.floor(crankRevsF);
             const secAgo = (crankRevsF - crankInt) / crankRevPerSec;
-            crankEventTicks = Math.round((elapsed - secAgo) * 1024) % 65536;
+            crankEventTicks = Math.round((spinSec - secAgo) * 1024) % 65536;
         }
 
         const dv = new DataView(new ArrayBuffer(11));

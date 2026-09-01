@@ -22,6 +22,11 @@ const (
 	defaultWheel = 2105
 	minWheel     = 1000
 	maxWheel     = 3000
+
+	// A lane that rolls more than this far during the countdown is a rider who
+	// jumped the start. Measured from wheel revolutions, so a stale speed
+	// reading from a wheel that has actually stopped doesn't trigger it.
+	falseStartDistance = 3.0
 )
 
 type Command struct {
@@ -36,11 +41,20 @@ type Command struct {
 	Source2 string `json:"source2"`
 
 	// Fields for a "sensor" command — one reading pushed from the browser after
-	// it has done the BLE math.
+	// it has done the BLE math. Rider is also used by a "source" command, whose
+	// Source is "ble" or "mock" and switches that lane between races.
 	Rider     int     `json:"rider"`
 	Speed     float64 `json:"speed"`
 	Cadence   float64 `json:"cadence"`
 	WheelRevs float64 `json:"wheelRevs"`
+	Source    string  `json:"source"`
+}
+
+// sourceChange moves one lane between the simulation and a Bluetooth sensor
+// outside of a race, so its live readings show during the pre-start check.
+type sourceChange struct {
+	rider  int
+	remote bool
 }
 
 // startParams is a validated race configuration handed from the reader goroutine
@@ -72,6 +86,9 @@ type RaceData struct {
 	Elapsed   float64         `json:"elapsed"`
 	Distance  float64         `json:"distance"`
 	Times     map[int]float64 `json:"times"`
+
+	// FalseStart is the rider that jumped the last countdown, or 0.
+	FalseStart int `json:"falseStart"`
 }
 
 func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,18 +119,20 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	raceEngine := race.New(defaultDistance)
 
-	// Buffered so a burst of start commands never blocks the reader.
+	// Buffered so a burst of commands never blocks the reader.
 	starts := make(chan startParams, 1)
+	sources := make(chan sourceChange, 4)
 
-	go readCommands(r.Context(), conn, starts, remotes)
+	go readCommands(r.Context(), conn, starts, sources, remotes)
 
-	runRaceLoop(r.Context(), conn, raceEngine, riders, mocks, remotes, starts)
+	runRaceLoop(r.Context(), conn, raceEngine, riders, mocks, remotes, starts, sources)
 }
 
 func readCommands(
 	ctx context.Context,
 	conn *websocket.Conn,
 	starts chan<- startParams,
+	sources chan<- sourceChange,
 	remotes []*sensor.RemoteSensor,
 ) {
 	for {
@@ -130,6 +149,16 @@ func readCommands(
 			i := command.Rider - 1
 			if i >= 0 && i < len(remotes) {
 				remotes[i].Push(command.Speed, command.Cadence, command.WheelRevs)
+			}
+			continue
+
+		case "source":
+			if command.Rider == 1 || command.Rider == 2 {
+				select {
+				case sources <- sourceChange{rider: command.Rider, remote: command.Source == "ble"}:
+				case <-ctx.Done():
+					return
+				}
 			}
 			continue
 
@@ -187,16 +216,25 @@ func runRaceLoop(
 	mocks []*sensor.MockSensor,
 	remotes []*sensor.RemoteSensor,
 	starts <-chan startParams,
+	sources <-chan sourceChange,
 ) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
 	lastUpdate := time.Now()
+	prevState := raceEngine.GetState()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
+
+		case sc := <-sources:
+			// Only outside a race — mid-race a swap would jump the distance.
+			if s := raceEngine.GetState(); s == race.StateReady || s == race.StateFinished {
+				i := sc.rider - 1
+				pickSensor(riders[i], sc.remote, mocks[i], remotes[i])
+			}
 
 		case p := <-starts:
 			raceEngine.SetDistance(p.distance)
@@ -222,10 +260,29 @@ func runRaceLoop(
 
 			lastUpdate = now
 
-			// Keep advancing riders who haven't crossed yet, even once the race
-			// is Finished, so every rider gets a recorded time.
-			switch raceEngine.GetState() {
+			state := raceEngine.GetState()
+
+			// The distance counter starts exactly when the race goes live, so
+			// warm-up spinning during the countdown never counts.
+			if state == race.StateRunning && prevState != race.StateRunning {
+				for _, rem := range remotes {
+					rem.Rebase()
+				}
+			}
+			prevState = state
+
+			switch state {
+			case race.StateCountdown:
+				// A rider whose wheel has rolled forward is jumping the start.
+				for _, r := range riders {
+					if r.Distance() > falseStartDistance {
+						raceEngine.FalseStart(r.ID)
+					}
+				}
+
 			case race.StateRunning, race.StateFinished:
+				// Keep advancing riders who haven't crossed yet, even once the
+				// race is Finished, so every rider gets a recorded time.
 				for _, r := range riders {
 					if raceEngine.IsFinished(r.ID) {
 						continue
@@ -299,13 +356,14 @@ func sendRaceData(
 	raceEngine *race.Race,
 ) error {
 	data := RaceData{
-		Type:      "race",
-		State:     raceEngine.GetState(),
-		Countdown: raceEngine.GetCountdown(),
-		Winner:    raceEngine.GetWinner(),
-		Elapsed:   raceEngine.GetElapsed(),
-		Distance:  raceEngine.GetDistance(),
-		Times:     raceEngine.FinishSeconds(),
+		Type:       "race",
+		State:      raceEngine.GetState(),
+		Countdown:  raceEngine.GetCountdown(),
+		Winner:     raceEngine.GetWinner(),
+		Elapsed:    raceEngine.GetElapsed(),
+		Distance:   raceEngine.GetDistance(),
+		Times:      raceEngine.FinishSeconds(),
+		FalseStart: raceEngine.GetFalseStart(),
 	}
 
 	return wsjson.Write(ctx, conn, data)

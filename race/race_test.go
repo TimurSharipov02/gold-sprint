@@ -196,6 +196,56 @@ func TestFinishSecondsEmptyBeforeStart(t *testing.T) {
 	}
 }
 
+func TestFalseStartAbortsCountdown(t *testing.T) {
+	r := New(250)
+	r.countdownStep = 50 * time.Millisecond
+	r.Start()
+
+	if !r.FalseStart(2) {
+		t.Fatal("FalseStart returned false during countdown")
+	}
+
+	if got := r.GetState(); got != StateReady {
+		t.Fatalf("state = %q, want %q", got, StateReady)
+	}
+
+	if got := r.GetFalseStart(); got != 2 {
+		t.Fatalf("false-start rider = %d, want 2", got)
+	}
+
+	// The aborted countdown must not go on to start the race.
+	waitState(t, r, StateReady)
+	time.Sleep(200 * time.Millisecond)
+
+	if got := r.GetState(); got != StateReady {
+		t.Fatalf("race started after a false start: state = %q", got)
+	}
+}
+
+func TestFalseStartIgnoredOutsideCountdown(t *testing.T) {
+	r := New(250)
+
+	if r.FalseStart(1) {
+		t.Fatal("FalseStart succeeded while Ready")
+	}
+
+	if r.GetFalseStart() != 0 {
+		t.Fatalf("false-start rider set to %d while Ready", r.GetFalseStart())
+	}
+}
+
+func TestStartClearsFalseStart(t *testing.T) {
+	r := newFast(250)
+	r.Start()
+	r.FalseStart(1)
+
+	r.Start()
+
+	if got := r.GetFalseStart(); got != 0 {
+		t.Fatalf("false-start rider = %d after restart, want 0", got)
+	}
+}
+
 func TestSetDistance(t *testing.T) {
 	r := New(250)
 
