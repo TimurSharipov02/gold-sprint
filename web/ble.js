@@ -43,8 +43,6 @@ function newSensorState() {
         device: null,
         characteristic: null,
         connected: false,
-        emulating: false,
-        emuTimer: null,
 
         profile: "csc", // "csc" | "cp"
 
@@ -164,11 +162,6 @@ async function attach(rider) {
 function disconnectSensor(rider) {
 
     const st = sensors[rider];
-
-    if (st.emulating) {
-        stopEmulation(rider);
-        return;
-    }
 
     if (st.device && st.device.gatt.connected) {
         st.device.gatt.disconnect();
@@ -365,150 +358,21 @@ function push(rider) {
     window.raceApp.sendSensor(rider, st.speed, st.cadence, st.rawWheelRevs);
 
     const live = document.getElementById(`ble-live-${rider}`);
-    if (live && (st.connected || st.emulating)) {
+    if (live && st.connected) {
         live.textContent = `${st.speed.toFixed(1)} км/ч`;
     }
 }
 
 
-// Keep pushing while connected so the server sees a fresh "0" when the wheel
+// Keep pushing while connected so the engine sees a fresh "0" when the wheel
 // stops instead of the last non-zero value.
 setInterval(() => {
     [1, 2].forEach((rider) => {
-        const st = sensors[rider];
-        if (st.connected && !st.emulating) {
+        if (sensors[rider].connected) {
             push(rider);
         }
     });
 }, 500);
-
-
-/* ---- emulation (test the whole pipeline without hardware) --------------- */
-
-function toggleEmulation(rider) {
-    if (sensors[rider].emulating) {
-        stopEmulation(rider);
-    } else {
-        startEmulation(rider);
-    }
-}
-
-function startEmulation(rider) {
-
-    const st = sensors[rider];
-
-    if (st.connected) {
-        return;
-    }
-
-    if (st.emuTimer) {
-        clearInterval(st.emuTimer);
-        st.emuTimer = null;
-    }
-
-    resetDeltas(st);
-    st.emulating = true;
-    st.connected = false;
-    st.profile = "csc";
-    st.hasWheel = true;
-    st.hasCrank = true;
-
-    window.raceApp.setBleSource(rider, true);
-    setStatus(rider, "ЭМУЛЯЦИЯ — тест без датчика");
-    updateTag(rider);
-
-    const wheelTargetRps = 4.5 + Math.random() * 3.5; // ~34-61 km/h at 2.1 m
-    const crankTargetRps = 1.3 + Math.random() * 0.4; // ~80-100 rpm
-
-    const wheelRevs0 = 1000 + Math.floor(Math.random() * 500);
-    const crankRevs0 = 500;
-
-    // Rides like a real trainer: spins up quickly, coasts down slowly. The rider
-    // warms up (READY), lets the wheel coast during the countdown, and goes on
-    // GO. Set st.emuJumpTheGun to add power mid-countdown and trip the
-    // false-start detection.
-    let wheelRps = 0;
-    let crankRps = 0;
-    let wheelAccum = wheelRevs0;
-    let crankAccum = crankRevs0;
-    let wheelInt = wheelRevs0;
-    let crankInt = crankRevs0;
-    let wheelEventTicks = 0;
-    let crankEventTicks = 0;
-    let simTicks = 0; // 1/1024 s
-    let countdownSec = 0;
-    let lastMs = performance.now();
-
-    const approach = (cur, target, upRate, downRate, dt) => {
-        const rate = target > cur ? upRate : downRate;
-        const step = rate * dt;
-        return Math.abs(target - cur) <= step
-            ? target
-            : cur + Math.sign(target - cur) * step;
-    };
-
-    st.emuTimer = setInterval(() => {
-        const nowMs = performance.now();
-        const dt = Math.min((nowMs - lastMs) / 1000, 2);
-        lastMs = nowMs;
-
-        const appState = window.raceApp.state;
-        const inCountdown = appState === "countdown";
-        countdownSec = inCountdown ? countdownSec + dt : 0;
-
-        let spin = appState === "ready" || appState === "running";
-        if (inCountdown && st.emuJumpTheGun && countdownSec > 0.9) {
-            spin = true; // the "jump": add power partway through the countdown
-        }
-
-        const wheelTarget = spin ? wheelTargetRps : 0;
-        const crankTarget = spin ? crankTargetRps : 0;
-
-        // rev/s^2: quick to spin up, slow to coast down
-        wheelRps = approach(wheelRps, wheelTarget, 6, 1.3, dt);
-        crankRps = approach(crankRps, crankTarget, 4, 1.0, dt);
-
-        wheelAccum += wheelRps * dt;
-        crankAccum += crankRps * dt;
-        simTicks = (simTicks + Math.round(dt * 1024)) % 65536;
-
-        // The event time only advances while the wheel / crank is actually
-        // turning; once stopped it holds, which the parser reads as zero speed.
-        if (Math.floor(wheelAccum) > wheelInt) {
-            wheelInt = Math.floor(wheelAccum);
-            wheelEventTicks = simTicks;
-        }
-        if (Math.floor(crankAccum) > crankInt) {
-            crankInt = Math.floor(crankAccum);
-            crankEventTicks = simTicks;
-        }
-
-        const dv = new DataView(new ArrayBuffer(11));
-        dv.setUint8(0, 0x03);
-        dv.setUint32(1, wheelInt, true);
-        dv.setUint16(5, wheelEventTicks, true);
-        dv.setUint16(7, crankInt % 65536, true);
-        dv.setUint16(9, crankEventTicks, true);
-
-        onMeasurement(rider, dv);
-    }, 400);
-}
-
-function stopEmulation(rider) {
-
-    const st = sensors[rider];
-
-    clearInterval(st.emuTimer);
-    st.emuTimer = null;
-    st.emulating = false;
-    st.speed = 0;
-    st.cadence = 0;
-    resetDeltas(st);
-
-    window.raceApp.setBleSource(rider, false);
-    setStatus(rider, "не подключён");
-    updateTag(rider);
-}
 
 
 /* ---- UI --------------------------------------------------------------------- */
@@ -528,14 +392,8 @@ function updateTag(rider) {
         return;
     }
 
-    const st = sensors[rider];
-
-    if (st.connected || st.emulating) {
-        el.textContent = st.emulating ? "◎ ЭМУЛЯЦИЯ" : "◉ ДАТЧИК";
-        el.hidden = false;
-    } else {
-        el.hidden = true;
-    }
+    el.textContent = "◉ ДАТЧИК";
+    el.hidden = !sensors[rider].connected;
 }
 
 
@@ -543,12 +401,10 @@ function updateTag(rider) {
     const connect = document.getElementById(`ble-connect-${rider}`);
     const all = document.getElementById(`ble-connect-all-${rider}`);
     const disconnect = document.getElementById(`ble-disconnect-${rider}`);
-    const emulate = document.getElementById(`ble-emulate-${rider}`);
 
     if (connect) connect.addEventListener("click", () => connectSensor(rider, false));
     if (all) all.addEventListener("click", () => connectSensor(rider, true));
     if (disconnect) disconnect.addEventListener("click", () => disconnectSensor(rider));
-    if (emulate) emulate.addEventListener("click", () => toggleEmulation(rider));
 });
 
 if (!navigator.bluetooth) {

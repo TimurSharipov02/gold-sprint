@@ -356,8 +356,9 @@ class Engine {
         }
     }
 
-    // A lane source toggle from ble.js — applied between races so the pre-start
-    // check shows live readings.
+    // A lane source toggle from ble.js: a sensor connected or dropped. Applied
+    // immediately unless a race is live (mid-race a swap would jump the
+    // distance) — in that case it lands on the next return to Ready.
     setSource(rider, remote) {
         const i = rider - 1;
         if (i < 0 || i >= this.riders.length) {
@@ -365,8 +366,7 @@ class Engine {
         }
         this.desiredRemote[i] = Boolean(remote);
 
-        const s = this.race.state;
-        if (s === RaceState.READY || s === RaceState.FINISHED) {
+        if (this.race.state !== RaceState.RUNNING) {
             this._pickSensor(i, this.desiredRemote[i]);
         }
     }
