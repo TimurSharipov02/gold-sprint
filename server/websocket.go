@@ -224,13 +224,20 @@ func runRaceLoop(
 	lastUpdate := time.Now()
 	prevState := raceEngine.GetState()
 
+	// The lane source the browser wants; applied outside a race so pre-start
+	// readings are live, and re-applied whenever the race returns to Ready.
+	var desiredRemote [2]bool
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case sc := <-sources:
-			// Only outside a race — mid-race a swap would jump the distance.
+			desiredRemote[sc.rider-1] = sc.remote
+
+			// Apply now if we're between races; otherwise it lands on the next
+			// return to Ready, so a mid-race swap can't jump the distance.
 			if s := raceEngine.GetState(); s == race.StateReady || s == race.StateFinished {
 				i := sc.rider - 1
 				pickSensor(riders[i], sc.remote, mocks[i], remotes[i])
@@ -242,6 +249,7 @@ func runRaceLoop(
 			riders[0].SetWheelCircumference(p.wheel1)
 			riders[1].SetWheelCircumference(p.wheel2)
 
+			desiredRemote = [2]bool{p.remote1, p.remote2}
 			pickSensor(riders[0], p.remote1, mocks[0], remotes[0])
 			pickSensor(riders[1], p.remote2, mocks[1], remotes[1])
 
@@ -267,6 +275,14 @@ func runRaceLoop(
 			if state == race.StateRunning && prevState != race.StateRunning {
 				for _, rem := range remotes {
 					rem.Rebase()
+				}
+			}
+
+			// Back to Ready (a finished race, or a false start): honour any
+			// source change the browser asked for mid-race.
+			if state == race.StateReady && prevState != race.StateReady {
+				for i := range riders {
+					pickSensor(riders[i], desiredRemote[i], mocks[i], remotes[i])
 				}
 			}
 			prevState = state

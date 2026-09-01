@@ -15,9 +15,6 @@ const backButton = document.getElementById("back-button");
 
 const startButton = document.getElementById("start-button");
 
-const distanceSelect =
-    document.getElementById("setup-distance");
-
 const wheel1 =
     document.getElementById("wheel-1");
 
@@ -177,13 +174,6 @@ function connectSocket() {
 
         } else {
 
-            // A staged tournament heat freezes the screen until its own race
-            // starts, so the previous race's final rider values don't repaint
-            // over the reset.
-            if (raceScreenStaged()) {
-                return;
-            }
-
             updateRider(data);
         }
     };
@@ -205,8 +195,16 @@ function raceScreenStaged() {
 
 let currentScreen = "race";
 
+// Where to return to when leaving SETUP — so saving mid-tournament doesn't dump
+// you onto the free-race screen.
+let screenBeforeSetup = "race";
+
 
 function showScreen(screen) {
+
+    if (screen === "setup" && currentScreen !== "setup") {
+        screenBeforeSetup = currentScreen;
+    }
 
     currentScreen = screen;
 
@@ -264,37 +262,38 @@ navSetup.addEventListener(
 
 backButton.addEventListener(
     "click",
-    () => showScreen("race")
+    () => showScreen(screenBeforeSetup)
 );
 
 
 /* =========================
-   SAVE SETTINGS
+   SETTINGS — WHEEL CIRCUMFERENCE
    ========================= */
+
+function applyWheel(rider, input) {
+
+    const mm = Number(input.value);
+
+    if (mm >= 1000 && mm <= 3000) {
+        settings.wheels[rider] = mm;
+    } else {
+        input.value = settings.wheels[rider];
+    }
+}
+
+
+wheel1.addEventListener("change", () => applyWheel(1, wheel1));
+wheel2.addEventListener("change", () => applyWheel(2, wheel2));
+
 
 saveSettings.addEventListener(
     "click",
     () => {
 
-        settings.distance =
-            Number(distanceSelect.value);
+        applyWheel(1, wheel1);
+        applyWheel(2, wheel2);
 
-        settings.wheels[1] =
-            Number(wheel1.value);
-
-        settings.wheels[2] =
-            Number(wheel2.value);
-
-        console.log(
-            "SETTINGS SAVED",
-            settings
-        );
-
-        raceDistance = settings.distance;
-
-        updateRaceDistance();
-
-        showScreen("race");
+        showScreen(screenBeforeSetup);
     }
 );
 
@@ -374,25 +373,31 @@ function updateRider(data) {
     const rider =
         data.rider;
 
+    const staged = raceScreenStaged();
+    const live = data.source === "ble";
 
-    // Speed and cadence are always live, so a rider can spin up and check the
-    // sensor / trainer before the start.
+    // Speed and cadence show live so a rider can spin up and check the sensor,
+    // trainer and rig before the start — including between tournament heats.
+    // While a heat is staged, only a real sensor's readings are trustworthy
+    // (a simulated lane would just show its last frozen value).
+    const showReadings = !staged || live;
+
     document.getElementById(
         `speed-${rider}`
     ).textContent =
-        data.speed.toFixed(1);
+        showReadings ? data.speed.toFixed(1) : "0.0";
 
 
     document.getElementById(
         `cadence-${rider}`
     ).textContent =
-        Math.round(data.cadence);
+        showReadings ? Math.round(data.cadence) : "0";
 
 
-    // Distance and progress only count once the race is actually running — not
-    // before START and not during the countdown.
+    // Distance and progress only count once the race is actually running — never
+    // before START, during the countdown, or while a heat is staged.
     const counting =
-        raceState === "running" || raceState === "finished";
+        !staged && (raceState === "running" || raceState === "finished");
 
 
     document.getElementById(
@@ -598,7 +603,6 @@ function handleRaceData(data) {
     if (raceScreenStaged()) {
 
         startButton.disabled = false;
-        distanceSelect.disabled = false;
 
         if (data.state !== "countdown") {
             return;
@@ -611,9 +615,6 @@ function handleRaceData(data) {
         case "ready":
 
             startButton.disabled =
-                false;
-
-            distanceSelect.disabled =
                 false;
 
             if (data.falseStart > 0 && !falseStartDismissed) {
@@ -641,9 +642,6 @@ function handleRaceData(data) {
             startButton.disabled =
                 true;
 
-            distanceSelect.disabled =
-                true;
-
             resultDismissed = false;
             falseStartDismissed = false;
 
@@ -667,9 +665,6 @@ function handleRaceData(data) {
             startButton.disabled =
                 true;
 
-            distanceSelect.disabled =
-                true;
-
             hideOverlay();
 
             break;
@@ -678,9 +673,6 @@ function handleRaceData(data) {
         case "finished":
 
             startButton.disabled =
-                false;
-
-            distanceSelect.disabled =
                 false;
 
             if (tournament.heat) {
@@ -1290,7 +1282,6 @@ function resetRaceScreen() {
     resultDismissed = true;
 
     startButton.disabled = false;
-    distanceSelect.disabled = false;
 }
 
 

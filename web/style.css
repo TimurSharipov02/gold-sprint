@@ -78,10 +78,23 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-.logo {
-    font-size: 16px;
+/* The race screen's bar carries only the logo — centre it and give it room. */
+#race-screen .topbar {
+    height: 84px;
 
-    letter-spacing: 2px;
+    display: flex;
+
+    justify-content: center;
+}
+
+.logo {
+    font-size: clamp(20px, 5vw, 28px);
+
+    font-weight: bold;
+
+    letter-spacing: 4px;
+
+    text-align: center;
 }
 
 .screen-title {
@@ -1214,10 +1227,19 @@ select {
     width: 100%;
 }
 
+/* The bracket breaks out of the narrow content column and centres on the
+   viewport, so a full 16-player table fits without a horizontal scrollbar.
+   #app is viewport-centred, so 50% of this element's containing block is the
+   viewport centre. */
 .bracket-scroll {
-    margin: 0 -20px;
+    width: min(96vw, 1180px);
 
-    padding: 0 20px;
+    margin-left: 50%;
+    transform: translateX(-50%);
+
+    display: flex;
+
+    justify-content: safe center;
 
     overflow-x: auto;
 }
@@ -1225,13 +1247,11 @@ select {
 .bracket {
     display: flex;
 
-    gap: 14px;
+    gap: 12px;
 
     align-items: flex-start;
 
-    min-width: min-content;
-
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 }
 
 .br-col {
@@ -1243,7 +1263,7 @@ select {
 
     flex: 0 0 auto;
 
-    width: 150px;
+    width: 132px;
 }
 
 .br-round-label {

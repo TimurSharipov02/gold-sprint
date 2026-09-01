@@ -8,7 +8,7 @@
 
     <title>Gold Sprint</title>
 
-    <link rel="stylesheet" href="/style.css?v=22">
+    <link rel="stylesheet" href="/style.css?v=23">
 </head>
 
 <body>
@@ -139,110 +139,6 @@
             <div class="setup-content">
 
                 <div class="section-title">
-                    RACE
-                </div>
-
-
-                <div class="setting-row">
-
-                    <div>
-                        <div class="setting-name">
-                            DISTANCE
-                        </div>
-
-                        <div class="setting-description">
-                            Race distance
-                        </div>
-                    </div>
-
-                    <select id="setup-distance">
-
-                        <option value="10">
-                            10 M
-                        </option>
-
-                        <option value="100">
-                            100 M
-                        </option>
-
-                        <option value="250" selected>
-                            250 M
-                        </option>
-
-                        <option value="500">
-                            500 M
-                        </option>
-
-                        <option value="666">
-                            666 M
-                        </option>
-
-                        <option value="1000">
-                            1000 M
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <div class="section-title">
-                    WHEEL
-                </div>
-
-
-                <!-- RIDER 01 -->
-
-                <div class="rider-setting">
-
-                    <div class="rider-setting-title">
-                        RIDER 01
-                    </div>
-
-                    <div class="wheel-input">
-
-                        <input id="wheel-1" type="number" value="2105" min="1000" max="3000">
-
-                        <span>MM</span>
-
-                    </div>
-
-                    <div class="wheel-description">
-                        Wheel circumference
-                    </div>
-
-                </div>
-
-
-                <!-- RIDER 02 -->
-
-                <div class="rider-setting">
-
-                    <div class="rider-setting-title">
-                        RIDER 02
-                    </div>
-
-                    <div class="wheel-input">
-
-                        <input id="wheel-2" type="number" value="2105" min="1000" max="3000">
-
-                        <span>MM</span>
-
-                    </div>
-
-                    <div class="wheel-description">
-                        Wheel circumference
-                    </div>
-
-                </div>
-
-
-                <button id="save-settings" class="main-button">
-                    SAVE
-                </button>
-
-
-                <div class="section-title">
                     ДАТЧИКИ · BLUETOOTH
                 </div>
 
@@ -312,6 +208,46 @@
                         <button id="ble-emulate-2" class="ble-button ble-secondary">
                             Эмуляция
                         </button>
+                    </div>
+
+                </div>
+
+
+                <button id="save-settings" class="main-button">
+                    ГОТОВО
+                </button>
+
+
+                <div class="section-title">
+                    ОКРУЖНОСТЬ КОЛЕСА
+                </div>
+
+                <div class="ble-note">
+                    Влияет на скорость и дистанцию. 700×25c ≈ 2105 мм.
+                </div>
+
+                <div class="rider-setting">
+
+                    <div class="rider-setting-title lane-1">
+                        RIDER 01
+                    </div>
+
+                    <div class="wheel-input">
+                        <input id="wheel-1" type="number" value="2105" min="1000" max="3000">
+                        <span>MM</span>
+                    </div>
+
+                </div>
+
+                <div class="rider-setting">
+
+                    <div class="rider-setting-title lane-2">
+                        RIDER 02
+                    </div>
+
+                    <div class="wheel-input">
+                        <input id="wheel-2" type="number" value="2105" min="1000" max="3000">
+                        <span>MM</span>
                     </div>
 
                 </div>
@@ -392,8 +328,8 @@
     </div>
 
 
-    <script src="/app.js?v=22"></script>
-    <script src="/ble.js?v=22"></script>
+    <script src="/app.js?v=23"></script>
+    <script src="/ble.js?v=23"></script>
 
 </body>
 
