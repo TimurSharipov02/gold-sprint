@@ -366,8 +366,7 @@ function push(rider) {
 
     const live = document.getElementById(`ble-live-${rider}`);
     if (live && (st.connected || st.emulating)) {
-        live.textContent =
-            `${st.speed.toFixed(1)} км/ч · ${Math.round(st.cadence)} об/мин`;
+        live.textContent = `${st.speed.toFixed(1)} км/ч`;
     }
 }
 
@@ -418,7 +417,7 @@ function startEmulation(rider) {
     setStatus(rider, "ЭМУЛЯЦИЯ — тест без датчика");
     updateTag(rider);
 
-    const wheelTargetRps = 3.7 + Math.random() * 1.6; // ~28-42 km/h at 2.1 m
+    const wheelTargetRps = 4.5 + Math.random() * 3.5; // ~34-61 km/h at 2.1 m
     const crankTargetRps = 1.3 + Math.random() * 0.4; // ~80-100 rpm
 
     const wheelRevs0 = 1000 + Math.floor(Math.random() * 500);
@@ -532,13 +531,7 @@ function updateTag(rider) {
     const st = sensors[rider];
 
     if (st.connected || st.emulating) {
-        const kinds = [
-            st.hasWheel ? "скорость" : null,
-            st.hasCrank ? "каденс" : null
-        ].filter(Boolean).join(" + ");
-
-        el.textContent =
-            `${st.emulating ? "◎ ЭМУЛЯЦИЯ" : "◉ ДАТЧИК"}${kinds ? " · " + kinds : ""}`;
+        el.textContent = st.emulating ? "◎ ЭМУЛЯЦИЯ" : "◉ ДАТЧИК";
         el.hidden = false;
     } else {
         el.hidden = true;

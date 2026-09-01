@@ -41,6 +41,12 @@ const riderName2 =
 const raceHeat =
     document.getElementById("race-heat");
 
+const freeRaceControls =
+    document.getElementById("free-race-controls");
+
+const freeRaceDistance =
+    document.getElementById("free-race-distance");
+
 const overlay =
     document.getElementById("overlay");
 
@@ -291,6 +297,17 @@ function updateRaceDistance() {
 }
 
 
+// The free-race distance picker (race screen). Hidden during a tournament heat,
+// where the heat sets its own distance.
+freeRaceDistance.addEventListener("change", () => {
+    settings.distance = Number(freeRaceDistance.value);
+    if (!tournament.heat) {
+        raceDistance = settings.distance;
+        updateRaceDistance();
+    }
+});
+
+
 /* =========================
    START RACE
    ========================= */
@@ -324,22 +341,16 @@ function updateRider(data) {
     const racing =
         !staged && (raceState === "running" || raceState === "finished");
 
-    // A real sensor's speed/cadence show at all times, so a rider can spin up
-    // and check the sensor, trainer and rig before the start. A simulated lane
-    // has nothing to check, so its readings only show while a race is on —
-    // otherwise it would sit on a frozen leftover value.
+    // A real sensor's speed shows at all times, so a rider can spin up and check
+    // the sensor, trainer and rig before the start. A simulated lane has nothing
+    // to check, so its readings only show while a race is on — otherwise it
+    // would sit on a frozen leftover value.
     const showReadings = live || racing;
 
     document.getElementById(
         `speed-${rider}`
     ).textContent =
         showReadings ? data.speed.toFixed(1) : "0.0";
-
-
-    document.getElementById(
-        `cadence-${rider}`
-    ).textContent =
-        showReadings ? Math.round(data.cadence) : "0";
 
 
     // Distance and progress only count once the race is actually running — never
@@ -1225,13 +1236,12 @@ function clearLaneLabels() {
 }
 
 
-// Wipe the race screen back to a fresh start — speeds, distances, cadence,
-// progress bars and any lingering overlay — so НА ГОНКУ begins a clean heat.
+// Wipe the race screen back to a fresh start — speeds, distances, progress bars
+// and any lingering overlay — so НА ГОНКУ begins a clean heat.
 function resetRaceScreen() {
 
     ["1", "2"].forEach((n) => {
         document.getElementById(`speed-${n}`).textContent = "0.0";
-        document.getElementById(`cadence-${n}`).textContent = "0";
         document.getElementById(`distance-${n}`).textContent = "0.0";
         document.getElementById(`progress-${n}`).style.width = "0%";
     });
@@ -1269,6 +1279,9 @@ function heatRoundName() {
 function updateRaceHeatBanner() {
 
     const heat = tournament.heat;
+
+    // The free-race distance picker and the heat banner occupy the same slot.
+    freeRaceControls.hidden = Boolean(heat);
 
     if (!heat) {
         raceHeat.classList.add("hidden");
@@ -1895,11 +1908,9 @@ function updateSidebar() {
         return;
     }
 
-    // Standings show next to the race view during a heat, and next to a free
-    // race run while a tournament is in progress.
-    const show =
-        tournament.heat != null ||
-        (tournament.phase !== "idle" && currentScreen === "race");
+    // Standings sit next to the race view during a heat only. The RACE tab is
+    // just a free race — no tournament clutter there.
+    const show = tournament.heat != null && currentScreen === "tournament";
 
     tournamentSidebar.classList.toggle("hidden", !show);
 
@@ -2038,7 +2049,10 @@ tournamentBody.addEventListener("keydown", (event) => {
 loadTournament();
 renderTournament();
 updateHeatLayout();
+updateRaceHeatBanner();
 
+freeRaceDistance.value = String(settings.distance);
+raceDistance = settings.distance;
 updateRaceDistance();
 
 showScreen("race");

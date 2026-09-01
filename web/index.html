@@ -8,7 +8,7 @@
 
     <title>Gold Sprint</title>
 
-    <link rel="stylesheet" href="/style.css?v=33">
+    <link rel="stylesheet" href="/style.css?v=35">
 </head>
 
 <body>
@@ -30,93 +30,97 @@
                  race, and is moved into the tournament tab during a heat. -->
             <div id="race-view">
 
-            <div id="race-heat" class="race-heat hidden"></div>
+                <div id="race-heat" class="race-heat hidden"></div>
 
 
-            <div class="race-status">
-
-                <div id="status">
-                    READY
+                <div id="free-race-controls">
+                    <label>
+                        <span>ДИСТАНЦИЯ</span>
+                        <select id="free-race-distance">
+                            <option value="100">100 M</option>
+                            <option value="250" selected>250 M</option>
+                            <option value="500">500 M</option>
+                            <option value="1000">1000 M</option>
+                            <option value="2000">2000 M</option>
+                        </select>
+                    </label>
                 </div>
 
-            </div>
 
+                <div class="race-status">
 
-            <div class="riders">
-
-                <!-- RIDER 01 -->
-
-                <div class="rider rider-1">
-
-                    <div class="rider-name" id="rider-name-1">
-                        RIDER 01
-                    </div>
-
-                    <div class="sensor-tag" id="sensor-tag-1" hidden></div>
-
-                    <div class="speed">
-                        <span id="speed-1">0.0</span>
-                        <small>KM/H</small>
-                    </div>
-
-                    <div class="progress">
-                        <div id="progress-1"></div>
-                    </div>
-
-                    <div class="distance">
-                        <span id="distance-1">0.0</span>
-                        <small>
-                            / <span id="distance-limit-1">250</span> M
-                        </small>
-                    </div>
-
-                    <div class="cadence">
-                        <span id="cadence-1">0</span>
-                        <small>RPM</small>
+                    <div id="status">
+                        READY
                     </div>
 
                 </div>
 
 
-                <!-- RIDER 02 -->
+                <div class="riders">
 
-                <div class="rider rider-2">
+                    <!-- RIDER 01 -->
 
-                    <div class="rider-name" id="rider-name-2">
-                        RIDER 02
+                    <div class="rider rider-1">
+
+                        <div class="rider-name" id="rider-name-1">
+                            RIDER 01
+                        </div>
+
+                        <div class="sensor-tag" id="sensor-tag-1" hidden></div>
+
+                        <div class="speed">
+                            <span id="speed-1">0.0</span>
+                            <small>KM/H</small>
+                        </div>
+
+                        <div class="progress">
+                            <div id="progress-1"></div>
+                        </div>
+
+                        <div class="distance">
+                            <span id="distance-1">0.0</span>
+                            <small>
+                                / <span id="distance-limit-1">250</span> M
+                            </small>
+                        </div>
+
                     </div>
 
-                    <div class="sensor-tag" id="sensor-tag-2" hidden></div>
 
-                    <div class="speed">
-                        <span id="speed-2">0.0</span>
-                        <small>KM/H</small>
-                    </div>
+                    <!-- RIDER 02 -->
 
-                    <div class="progress">
-                        <div id="progress-2"></div>
-                    </div>
+                    <div class="rider rider-2">
 
-                    <div class="distance">
-                        <span id="distance-2">0.0</span>
-                        <small>
-                            / <span id="distance-limit-2">250</span> M
-                        </small>
-                    </div>
+                        <div class="rider-name" id="rider-name-2">
+                            RIDER 02
+                        </div>
 
-                    <div class="cadence">
-                        <span id="cadence-2">0</span>
-                        <small>RPM</small>
+                        <div class="sensor-tag" id="sensor-tag-2" hidden></div>
+
+                        <div class="speed">
+                            <span id="speed-2">0.0</span>
+                            <small>KM/H</small>
+                        </div>
+
+                        <div class="progress">
+                            <div id="progress-2"></div>
+                        </div>
+
+                        <div class="distance">
+                            <span id="distance-2">0.0</span>
+                            <small>
+                                / <span id="distance-limit-2">250</span> M
+                            </small>
+                        </div>
+
                     </div>
 
                 </div>
 
-            </div>
 
-
-            <button id="start-button" class="main-button">
-                START
-            </button>
+                <button id="start-button" class="main-button">
+                    START
+                </button>
 
             </div>
             <!-- /#race-view -->
@@ -146,11 +150,10 @@
             <div class="setup-content">
 
                 <div class="ble-note">
-                    Датчик скорости по Bluetooth — Chrome или Edge, по localhost
-                    или HTTPS. Подходит любой датчик со стандартным профилем
+                    Использовать браузер Chrome. Подходит любой датчик со стандартным профилем
                     (CYCPLUS, Magene, iGPSPORT, XOSS, Wahoo, Garmin…). Если не
-                    виден в списке — «Все устройства». Окружность колеса влияет
-                    на скорость и дистанцию (700×25c ≈ 2105 мм).
+                    виден в списке, воспользоваться кнопкой «Все устройства».
+                    Окружность колеса влияет на скорость и дистанцию (700×25c ≈ 2105 мм).
                 </div>
 
 
@@ -252,7 +255,7 @@
             <header class="topbar">
                 <div></div>
                 <div class="screen-title">
-                    TOURNAMENT
+                    ТРОПИНКА GOLDSPRINT
                 </div>
                 <div></div>
             </header>
@@ -269,20 +272,24 @@
 
         <nav class="navigation">
 
-            <button id="nav-race" class="nav-item active">
-                <span>■</span>
-                RACE
-            </button>
+            <div class="nav-inner">
 
-            <button id="nav-tournament" class="nav-item">
-                <span>◇</span>
-                TOURNAMENT
-            </button>
+                <button id="nav-race" class="nav-item active">
+                    <span>■</span>
+                    RACE
+                </button>
 
-            <button id="nav-setup" class="nav-item">
-                <span>⚙</span>
-                SETUP
-            </button>
+                <button id="nav-tournament" class="nav-item">
+                    <span>◇</span>
+                    TOURNAMENT
+                </button>
+
+                <button id="nav-setup" class="nav-item">
+                    <span>⚙</span>
+                    SETUP
+                </button>
+
+            </div>
 
         </nav>
 
@@ -319,9 +326,9 @@
     </div>
 
 
-    <script src="/app.js?v=33"></script>
-    <script src="/engine.js?v=33"></script>
-    <script src="/ble.js?v=33"></script>
+    <script src="/app.js?v=35"></script>
+    <script src="/engine.js?v=35"></script>
+    <script src="/ble.js?v=35"></script>
 
 </body>
 

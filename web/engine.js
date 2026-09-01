@@ -44,8 +44,9 @@ class MockSensor {
         this.speed = 0;
         this.cadence = 0;
         this.wheelRevs = 0;
-        // Form for this race: 40–48 km/h, redrawn every time.
-        this.maxSpeed = 40 + Math.random() * 8;
+        // Form for this race: ~42–56 km/h, redrawn every time. (Only the
+        // simulation is capped — a real sensor has no ceiling.)
+        this.maxSpeed = 42 + Math.random() * 14;
     }
 
     update(dt) {
@@ -336,11 +337,22 @@ class Engine {
         this._lastTick = performance.now();
     }
 
-    // A reading from ble.js.
+    // A reading from ble.js. BLE notifications keep firing even when the tab is
+    // backgrounded and the loop timer is throttled, so check the finish line
+    // here too — that keeps a fast sprint's finish accurate to the reading.
     pushSensor(rider, speed, cadence, wheelRevs) {
         const r = this.riders[rider - 1];
-        if (r) {
-            r.remote.push(speed, cadence, wheelRevs);
+        if (!r) {
+            return;
+        }
+
+        r.remote.push(speed, cadence, wheelRevs);
+
+        if (r.sensor === r.remote
+            && (this.race.state === RaceState.RUNNING || this.race.state === RaceState.FINISHED)
+            && !this.race.isFinished(r.id)
+            && r.distance >= this.race.distance) {
+            this.race.finish(r.id);
         }
     }
 
