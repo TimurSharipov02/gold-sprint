@@ -29,6 +29,18 @@ type Command struct {
 	Distance float64 `json:"distance"`
 	Wheel1   float64 `json:"wheel1"`
 	Wheel2   float64 `json:"wheel2"`
+
+	// source1/source2 pick each lane's data source for the next race:
+	// "ble" for a real Bluetooth sensor, anything else for the simulation.
+	Source1 string `json:"source1"`
+	Source2 string `json:"source2"`
+
+	// Fields for a "sensor" command — one reading pushed from the browser after
+	// it has done the BLE math.
+	Rider     int     `json:"rider"`
+	Speed     float64 `json:"speed"`
+	Cadence   float64 `json:"cadence"`
+	WheelRevs float64 `json:"wheelRevs"`
 }
 
 // startParams is a validated race configuration handed from the reader goroutine
@@ -37,6 +49,8 @@ type startParams struct {
 	distance float64
 	wheel1   float64
 	wheel2   float64
+	remote1  bool
+	remote2  bool
 }
 
 type SensorData struct {
@@ -44,6 +58,10 @@ type SensorData struct {
 	Speed    float64 `json:"speed"`
 	Cadence  float64 `json:"cadence"`
 	Distance float64 `json:"distance"`
+
+	// Source is "ble" while the lane is driven by a real sensor, "mock"
+	// otherwise, so the UI can show which readings are live.
+	Source string `json:"source"`
 }
 
 type RaceData struct {
@@ -65,9 +83,21 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer conn.Close(websocket.StatusNormalClosure, "")
 
+	// Both a simulated and a Bluetooth-fed sensor exist per lane for the whole
+	// connection; each race picks which one the rider reads from.
+	mocks := []*sensor.MockSensor{
+		sensor.NewMock(1, defaultWheel),
+		sensor.NewMock(2, defaultWheel),
+	}
+
+	remotes := []*sensor.RemoteSensor{
+		sensor.NewRemote(),
+		sensor.NewRemote(),
+	}
+
 	riders := []*rider.Rider{
-		rider.New(1, sensor.NewMock(1, defaultWheel), defaultWheel),
-		rider.New(2, sensor.NewMock(2, defaultWheel), defaultWheel),
+		rider.New(1, mocks[0], defaultWheel),
+		rider.New(2, mocks[1], defaultWheel),
 	}
 
 	raceEngine := race.New(defaultDistance)
@@ -75,15 +105,16 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	// Buffered so a burst of start commands never blocks the reader.
 	starts := make(chan startParams, 1)
 
-	go readCommands(r.Context(), conn, starts)
+	go readCommands(r.Context(), conn, starts, remotes)
 
-	runRaceLoop(r.Context(), conn, raceEngine, riders, starts)
+	runRaceLoop(r.Context(), conn, raceEngine, riders, mocks, remotes, starts)
 }
 
 func readCommands(
 	ctx context.Context,
 	conn *websocket.Conn,
 	starts chan<- startParams,
+	remotes []*sensor.RemoteSensor,
 ) {
 	for {
 		var command Command
@@ -92,7 +123,19 @@ func readCommands(
 			return
 		}
 
-		if command.Type != "start" {
+		switch command.Type {
+		case "sensor":
+			// A live reading from a Bluetooth sensor. Safe to apply here: the
+			// RemoteSensor is mutex-guarded and the race loop only reads it.
+			i := command.Rider - 1
+			if i >= 0 && i < len(remotes) {
+				remotes[i].Push(command.Speed, command.Cadence, command.WheelRevs)
+			}
+			continue
+
+		case "start":
+			// handled below
+		default:
 			continue
 		}
 
@@ -100,13 +143,15 @@ func readCommands(
 			distance: clamp(command.Distance, minDistance, maxDistance, defaultDistance),
 			wheel1:   clamp(command.Wheel1, minWheel, maxWheel, defaultWheel),
 			wheel2:   clamp(command.Wheel2, minWheel, maxWheel, defaultWheel),
+			remote1:  command.Source1 == "ble",
+			remote2:  command.Source2 == "ble",
 		}
 
 		fmt.Printf(
-			"START: distance=%.0f m, wheel1=%.0f mm, wheel2=%.0f mm\n",
+			"START: distance=%.0f m, wheel1=%.0f mm (%s), wheel2=%.0f mm (%s)\n",
 			params.distance,
-			params.wheel1,
-			params.wheel2,
+			params.wheel1, sourceName(params.remote1),
+			params.wheel2, sourceName(params.remote2),
 		)
 
 		select {
@@ -115,6 +160,14 @@ func readCommands(
 			return
 		}
 	}
+}
+
+func sourceName(remote bool) string {
+	if remote {
+		return "ble"
+	}
+
+	return "mock"
 }
 
 // clamp returns v when it lies within [min, max] and fallback otherwise.
@@ -131,6 +184,8 @@ func runRaceLoop(
 	conn *websocket.Conn,
 	raceEngine *race.Race,
 	riders []*rider.Rider,
+	mocks []*sensor.MockSensor,
+	remotes []*sensor.RemoteSensor,
 	starts <-chan startParams,
 ) {
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -148,6 +203,9 @@ func runRaceLoop(
 
 			riders[0].SetWheelCircumference(p.wheel1)
 			riders[1].SetWheelCircumference(p.wheel2)
+
+			pickSensor(riders[0], p.remote1, mocks[0], remotes[0])
+			pickSensor(riders[1], p.remote2, mocks[1], remotes[1])
 
 			for _, r := range riders {
 				r.Reset()
@@ -192,17 +250,39 @@ func runRaceLoop(
 	}
 }
 
+// pickSensor points a rider at the simulated or the Bluetooth sensor for the
+// coming race.
+func pickSensor(
+	r *rider.Rider,
+	remote bool,
+	mock *sensor.MockSensor,
+	rem *sensor.RemoteSensor,
+) {
+	if remote {
+		r.SetSensor(rem)
+		return
+	}
+
+	r.SetSensor(mock)
+}
+
 func sendRiderData(
 	ctx context.Context,
 	conn *websocket.Conn,
 	riders []*rider.Rider,
 ) error {
 	for _, r := range riders {
+		source := "mock"
+		if _, ok := r.Sensor.(*sensor.RemoteSensor); ok {
+			source = "ble"
+		}
+
 		data := SensorData{
 			Rider:    r.ID,
 			Speed:    r.Speed(),
 			Cadence:  r.Cadence(),
 			Distance: r.Distance(),
+			Source:   source,
 		}
 
 		if err := wsjson.Write(ctx, conn, data); err != nil {

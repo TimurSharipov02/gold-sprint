@@ -1427,6 +1427,118 @@ select {
 }
 
 
+/* =========================================================================
+   BLUETOOTH SENSORS
+   ========================================================================= */
+
+/* Race-screen tag under the rider name when a lane is on a real sensor. */
+.sensor-tag {
+    position: relative;
+    z-index: 1;
+
+    margin: -12px 0 16px;
+
+    color: #7ec87e;
+
+    font-size: 10px;
+
+    letter-spacing: 2px;
+}
+
+
+/* SETUP — sensor rows */
+
+.sensor-row {
+    padding: 16px 0;
+
+    border-top: 1px solid var(--border);
+}
+
+.sensor-row .rider-setting-title {
+    margin-bottom: 8px;
+}
+
+.ble-note {
+    margin: 8px 0 4px;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    line-height: 1.5;
+
+    letter-spacing: 0.5px;
+}
+
+.ble-status {
+    color: var(--text);
+
+    font-size: 12px;
+
+    letter-spacing: 1px;
+}
+
+.ble-status.ble-error {
+    color: #e06a5a;
+}
+
+.ble-live {
+    min-height: 14px;
+
+    margin-top: 4px;
+
+    color: #7ec87e;
+
+    font-size: 12px;
+
+    font-variant-numeric: tabular-nums;
+}
+
+.ble-buttons {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    margin-top: 12px;
+}
+
+.ble-button {
+    padding: 9px 14px;
+
+    border: 1px solid var(--bright);
+
+    background: var(--bg);
+    color: var(--bright);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+}
+
+.ble-button:hover {
+    background: var(--bright);
+    color: var(--bg);
+}
+
+.ble-button.ble-secondary {
+    border-color: var(--border);
+    color: var(--muted);
+}
+
+.ble-button.ble-secondary:hover {
+    border-color: var(--text);
+    background: transparent;
+    color: var(--text);
+}
+
+
 /* SMALL SCREEN */
 
 @media (max-width: 400px) {

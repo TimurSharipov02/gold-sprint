@@ -28,6 +28,12 @@ func (r *Rider) Reset() {
 	r.Sensor.Reset()
 }
 
+// SetSensor swaps the data source behind this rider — used to move a rider
+// between the built-in simulation and a real Bluetooth sensor.
+func (r *Rider) SetSensor(s sensor.Sensor) {
+	r.Sensor = s
+}
+
 func (r *Rider) Update(dt float64) {
 	r.Sensor.Update(dt)
 }

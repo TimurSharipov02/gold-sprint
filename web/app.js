@@ -86,6 +86,34 @@ const settings = {
 };
 
 
+// Which lanes are currently fed by a real Bluetooth sensor (set by ble.js).
+const bleSources = { 1: false, 2: false };
+
+// Small bridge for ble.js — it does the Web Bluetooth work and calls back here.
+window.raceApp = {
+
+    sendSensor(rider, speed, cadence, wheelRevs) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: "sensor",
+                rider,
+                speed,
+                cadence,
+                wheelRevs
+            }));
+        }
+    },
+
+    wheelCircumferenceMM(rider) {
+        return settings.wheels[rider] || 2105;
+    },
+
+    setBleSource(rider, active) {
+        bleSources[rider] = Boolean(active);
+    }
+};
+
+
 // Authoritative race distance, kept in sync with the server so the progress
 // bars match the distance the race is actually run at.
 let raceDistance = settings.distance;
@@ -296,7 +324,13 @@ startButton.addEventListener(
                 settings.wheels[1],
 
             wheel2:
-                settings.wheels[2]
+                settings.wheels[2],
+
+            source1:
+                bleSources[1] ? "ble" : "mock",
+
+            source2:
+                bleSources[2] ? "ble" : "mock"
 
         };
 
@@ -353,6 +387,16 @@ function updateRider(data) {
         `progress-${rider}`
     ).style.width =
         `${progress}%`;
+
+
+    // The server reports which source each lane is running on this race.
+    const tag = document.getElementById(`sensor-tag-${rider}`);
+    if (tag && data.source === "ble") {
+        tag.textContent = "◉ ЖИВОЙ ДАТЧИК";
+        tag.hidden = false;
+    } else if (tag && !bleSources[rider]) {
+        tag.hidden = true;
+    }
 }
 
 

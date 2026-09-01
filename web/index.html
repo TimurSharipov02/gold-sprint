@@ -8,7 +8,7 @@
 
     <title>Gold Sprint</title>
 
-    <link rel="stylesheet" href="/style.css?v=16">
+    <link rel="stylesheet" href="/style.css?v=19">
 </head>
 
 <body>
@@ -48,6 +48,8 @@
                         RIDER 01
                     </div>
 
+                    <div class="sensor-tag" id="sensor-tag-1" hidden></div>
+
                     <div class="speed">
                         <span id="speed-1">0.0</span>
                         <small>KM/H</small>
@@ -79,6 +81,8 @@
                     <div class="rider-name" id="rider-name-2">
                         RIDER 02
                     </div>
+
+                    <div class="sensor-tag" id="sensor-tag-2" hidden></div>
 
                     <div class="speed">
                         <span id="speed-2">0.0</span>
@@ -237,6 +241,81 @@
                     SAVE
                 </button>
 
+
+                <div class="section-title">
+                    ДАТЧИКИ · BLUETOOTH
+                </div>
+
+                <div class="ble-note">
+                    Chrome или Edge, по localhost или HTTPS. Датчик CYCPLUS в
+                    режиме скорости — имя «CYCPLUS S3». Для гонки нужна скорость,
+                    каденс — по желанию.
+                </div>
+
+
+                <!-- RIDER 01 -->
+
+                <div class="sensor-row">
+
+                    <div class="rider-setting-title lane-1">
+                        RIDER 01
+                    </div>
+
+                    <div id="ble-status-1" class="ble-status">
+                        не подключён
+                    </div>
+
+                    <div id="ble-live-1" class="ble-live"></div>
+
+                    <div class="ble-buttons">
+                        <button id="ble-connect-1" class="ble-button">
+                            Подключить
+                        </button>
+                        <button id="ble-disconnect-1" class="ble-button ble-secondary">
+                            Отключить
+                        </button>
+                        <button id="ble-connect-all-1" class="ble-button ble-secondary">
+                            Все устройства
+                        </button>
+                        <button id="ble-emulate-1" class="ble-button ble-secondary">
+                            Эмуляция
+                        </button>
+                    </div>
+
+                </div>
+
+
+                <!-- RIDER 02 -->
+
+                <div class="sensor-row">
+
+                    <div class="rider-setting-title lane-2">
+                        RIDER 02
+                    </div>
+
+                    <div id="ble-status-2" class="ble-status">
+                        не подключён
+                    </div>
+
+                    <div id="ble-live-2" class="ble-live"></div>
+
+                    <div class="ble-buttons">
+                        <button id="ble-connect-2" class="ble-button">
+                            Подключить
+                        </button>
+                        <button id="ble-disconnect-2" class="ble-button ble-secondary">
+                            Отключить
+                        </button>
+                        <button id="ble-connect-all-2" class="ble-button ble-secondary">
+                            Все устройства
+                        </button>
+                        <button id="ble-emulate-2" class="ble-button ble-secondary">
+                            Эмуляция
+                        </button>
+                    </div>
+
+                </div>
+
             </div>
 
         </section>
@@ -313,7 +392,8 @@
     </div>
 
 
-    <script src="/app.js?v=16"></script>
+    <script src="/app.js?v=19"></script>
+    <script src="/ble.js?v=19"></script>
 
 </body>
 
