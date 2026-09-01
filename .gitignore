@@ -10,3 +10,6 @@
 # Editor / IDE
 .idea/
 .vscode/
+
+# Vercel CLI
+.vercel/

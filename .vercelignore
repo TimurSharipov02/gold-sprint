@@ -1,0 +1,5 @@
+# Local dev only — keep Vercel from trying to build a Go project
+main.go
+go.mod
+go.sum
+gold-sprint

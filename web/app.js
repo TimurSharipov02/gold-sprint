@@ -94,19 +94,12 @@ const settings = {
 // Which lanes are currently fed by a real Bluetooth sensor (set by ble.js).
 const bleSources = { 1: false, 2: false };
 
-// Small bridge for ble.js — it does the Web Bluetooth work and calls back here.
+// Small bridge for ble.js — it does the Web Bluetooth work and calls back here,
+// straight into the in-browser race engine (window.engine, from engine.js).
 window.raceApp = {
 
     sendSensor(rider, speed, cadence, wheelRevs) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: "sensor",
-                rider,
-                speed,
-                cadence,
-                wheelRevs
-            }));
-        }
+        window.engine.pushSensor(rider, speed, cadence, wheelRevs);
     },
 
     wheelCircumferenceMM(rider) {
@@ -120,15 +113,9 @@ window.raceApp = {
     setBleSource(rider, active) {
         bleSources[rider] = Boolean(active);
 
-        // Tell the server right away so the lane's live readings show during the
-        // pre-start check, not only once a race begins.
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: "source",
-                rider,
-                source: active ? "ble" : "mock"
-            }));
-        }
+        // So the lane's live readings show during the pre-start check, not only
+        // once a race begins.
+        window.engine.setSource(rider, bleSources[rider]);
     }
 };
 
@@ -142,58 +129,10 @@ let raceDistance = settings.distance;
 // for the pre-start sensor check.
 let raceState = "ready";
 
-// A heat's race leaves the server in "finished". When the race view returns to
-// the RACE tab, that stale result isn't a free race — ignore it until the next
-// countdown.
+// A finished heat leaves the engine in "finished". When the race view returns
+// to the RACE tab, that stale result isn't a free race — ignore it until the
+// next countdown.
 let ignoreStaleFinish = false;
-
-
-/* =========================
-   WEBSOCKET
-   ========================= */
-
-// socket is reassigned on every reconnect; the START handler and others read it
-// through this binding so they always use the live connection.
-let socket;
-
-
-function connectSocket() {
-
-    socket = new WebSocket(`ws://${location.host}/ws`);
-
-    socket.onopen = () => {
-        console.log("WEBSOCKET CONNECTED");
-        statusEl.textContent = "READY";
-        startButton.disabled = false;
-    };
-
-    socket.onclose = () => {
-        console.log("WEBSOCKET CLOSED — reconnecting");
-        statusEl.textContent = "СВЯЗЬ ПОТЕРЯНА — ПЕРЕПОДКЛЮЧЕНИЕ...";
-        setTimeout(connectSocket, 2000);
-    };
-
-    socket.onerror = (error) => {
-        console.error("WEBSOCKET ERROR", error);
-    };
-
-    socket.onmessage = (event) => {
-
-        const data = JSON.parse(event.data);
-
-        if (data.type === "race") {
-
-            handleRaceData(data);
-
-        } else {
-
-            updateRider(data);
-        }
-    };
-}
-
-
-connectSocket();
 
 
 // True while a tournament heat is set up but its race hasn't begun yet.
@@ -360,45 +299,12 @@ startButton.addEventListener(
     "click",
     () => {
 
-        if (socket.readyState !== WebSocket.OPEN) {
-
-            console.error(
-                "WEBSOCKET IS NOT OPEN"
-            );
-
-            return;
-        }
-
-        const command = {
-
-            type: "start",
-
-            distance:
-                tournament.heat
-                    ? tournament.heat.distance
-                    : settings.distance,
-
-            wheel1:
-                settings.wheels[1],
-
-            wheel2:
-                settings.wheels[2],
-
-            source1:
-                bleSources[1] ? "ble" : "mock",
-
-            source2:
-                bleSources[2] ? "ble" : "mock"
-
-        };
-
-        console.log(
-            "SENDING START:",
-            command
-        );
-
-        socket.send(
-            JSON.stringify(command)
+        window.engine.start(
+            tournament.heat ? tournament.heat.distance : settings.distance,
+            settings.wheels[1],
+            settings.wheels[2],
+            bleSources[1],
+            bleSources[2]
         );
     }
 );
